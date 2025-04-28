@@ -23,7 +23,7 @@ function App() {
     Papa.parse("/Dividend payment data.csv", {
       download: true,
       header: true,
-      complete: (results) => {
+      complete: (results: any) => {
         console.log("Raw results from PapaParse:", results);
         const data = results.data as any[];
         setDividends(
@@ -46,7 +46,7 @@ function App() {
     Papa.parse("/escrow close dates.csv", {
       download: true,
       header: true,
-      complete: (results) => {
+      complete: (results: any) => {
         const data = results.data as any[];
         setAcquisitionDates(
           data
