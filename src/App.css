@@ -1,38 +1,206 @@
+:root {
+  --arrived-primary: #1A1A1A;
+  --arrived-secondary: #4A4A4A;
+  --arrived-accent: #00A0E9;
+  --arrived-background: #FFFFFF;
+  --arrived-border: #E5E5E5;
+  --arrived-success: #00C853;
+  --arrived-error: #FF3D00;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--arrived-background);
+  color: var(--arrived-primary);
+}
+
 .App {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h2 {
+  color: var(--arrived-primary);
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+input {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--arrived-border);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  display: block;
+  transition: border-color 0.2s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+input:focus {
+  outline: none;
+  border-color: var(--arrived-accent);
+  box-shadow: 0 0 0 2px rgba(0, 160, 233, 0.1);
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 2rem auto;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--arrived-border);
+}
+
+th {
+  background-color: #F8F9FA;
+  font-weight: 600;
+  color: var(--arrived-secondary);
+}
+
+td {
+  transition: background-color 0.2s ease;
+}
+
+td:hover {
+  background-color: #F8F9FA;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .App {
+    padding: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.75rem 0.5rem;
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.property-selector {
+  margin: 2rem auto;
+  max-width: 400px;
+}
+
+.search-container {
+  position: relative;
+}
+
+.property-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--arrived-border);
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.property-option {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.property-option:hover {
+  background-color: #F8F9FA;
+}
+
+.property-option.selected {
+  background-color: rgba(0, 160, 233, 0.1);
+  color: var(--arrived-accent);
+}
+
+/* Add smooth scrollbar for the dropdown */
+.property-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.property-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.property-dropdown::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.property-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.year-cell {
+  font-weight: 600;
+  background-color: #F8F9FA;
+}
+
+/* Checkmark and X styling */
+td {
+  font-size: 1.2rem;
+}
+
+td[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  background: var(--arrived-primary);
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  z-index: 1;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .App {
+    padding: 1rem;
   }
-  to {
-    transform: rotate(360deg);
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  td {
+    font-size: 1rem;
   }
 }

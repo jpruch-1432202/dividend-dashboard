@@ -18,6 +18,8 @@ function App() {
   const [dividends, setDividends] = useState<DividendRecord[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [acquisitionDates, setAcquisitionDates] = useState<AcquisitionDate[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     Papa.parse("/Dividend payment data.csv", {
@@ -60,7 +62,17 @@ function App() {
     });
   }, []);
 
-  const propertyNames = Array.from(new Set(dividends.map(d => d.propertyName)));
+  const propertyNames = Array.from(new Set(dividends.map(d => d.propertyName))).sort();
+
+  const filteredProperties = propertyNames.filter(name =>
+    name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handlePropertySelect = (property: string) => {
+    setSelectedProperty(property);
+    setSearchTerm(property);
+    setIsDropdownOpen(false);
+  };
 
   // Helper: Get all years and months in the data
   const months = [
@@ -136,62 +148,73 @@ function App() {
   return (
     <div className="App">
       <h2>Arrived Property Dividend History</h2>
-      <select
-        value={selectedProperty}
-        onChange={e => setSelectedProperty(e.target.value)}
-      >
-        <option value="">Select a property</option>
-        {propertyNames.map(name => (
-          <option key={name} value={name}>{name}</option>
-        ))}
-      </select>
-      {/* Table grid chart */}
-      {selectedProperty && (
-        <table style={{ margin: '20px auto', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: '4px' }}>Year</th>
-              {months.map(m => (
-                <th key={m} style={{ border: '1px solid #ccc', padding: '4px' }}>{m}</th>
+      <div className="property-selector">
+        <div className="search-container">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setIsDropdownOpen(true);
+              if (e.target.value === "") {
+                setSelectedProperty("");
+              }
+            }}
+            onFocus={() => setIsDropdownOpen(true)}
+            placeholder="Search or select a property"
+          />
+          {isDropdownOpen && filteredProperties.length > 0 && (
+            <div className="property-dropdown">
+              {filteredProperties.map(name => (
+                <div
+                  key={name}
+                  className={`property-option ${name === selectedProperty ? 'selected' : ''}`}
+                  onClick={() => handlePropertySelect(name)}
+                >
+                  {name}
+                </div>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {years.map(year => (
-              <tr key={year}>
-                <td style={{ border: '1px solid #ccc', padding: '4px', fontWeight: 'bold' }}>{year}</td>
-                {months.map((m, idx) => {
-                  const paid = wasPaidOrBlank(year, idx);
-                  const dividendAmount = paid ? getDividendAmount(year, idx) : 0;
-                  return (
-                    <td 
-                      key={m} 
-                      style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}
-                      title={paid === null ? '' : `$${dividendAmount.toFixed(2)}`}
-                    >
-                      {paid === null
-                        ? ''
-                        : paid
-                          ? '✅'
-                          : '❌'}
-                    </td>
-                  );
-                })}
-              </tr>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Table grid chart */}
+      <table>
+        <thead>
+          <tr>
+            <th>Year</th>
+            {months.map(m => (
+              <th key={m}>{m}</th>
             ))}
-          </tbody>
-        </table>
-      )}
-      {/* Old list for reference (optional, can remove) */}
-      <ul>
-        {dividends
-          .filter(d => !selectedProperty || d.propertyName === selectedProperty)
-          .map((d, i) => (
-            <li key={i}>
-              {d.propertyName} | {d.dividendDate.toLocaleDateString()} | {d.dividendPerShare}
-            </li>
+          </tr>
+        </thead>
+        <tbody>
+          {years.map(year => (
+            <tr key={year}>
+              <td className="year-cell">{year}</td>
+              {months.map((m, idx) => {
+                if (!selectedProperty) {
+                  return <td key={m}></td>;
+                }
+                const paid = wasPaidOrBlank(year, idx);
+                const dividendAmount = paid ? getDividendAmount(year, idx) : 0;
+                return (
+                  <td 
+                    key={m}
+                    {...(paid !== null ? { title: `$${dividendAmount.toFixed(2)}` } : {})}
+                  >
+                    {paid === null
+                      ? ''
+                      : paid
+                        ? '✅'
+                        : '❌'}
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-      </ul>
+        </tbody>
+      </table>
     </div>
   );
 }
