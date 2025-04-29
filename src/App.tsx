@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./App.css";
 
 // Define the type for your dividend data
@@ -145,6 +146,30 @@ function App() {
     return dividend ? dividend.dividendPerShare : 0;
   }
 
+  // Process data for the line chart
+  const getChartData = () => {
+    if (!selectedProperty) return [
+      { date: 'Jan 2021', amount: null },
+      { date: 'Jul 2021', amount: null },
+      { date: 'Jan 2022', amount: null },
+      { date: 'Jul 2022', amount: null },
+      { date: 'Jan 2023', amount: null },
+      { date: 'Jul 2023', amount: null },
+      { date: 'Jan 2024', amount: null }
+    ];
+    
+    return dividends
+      .filter(d => d.propertyName === selectedProperty)
+      .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime())
+      .map(d => ({
+        date: d.dividendDate.toLocaleDateString('en-US', { 
+          year: 'numeric',
+          month: 'short'
+        }),
+        amount: d.dividendPerShare
+      }));
+  };
+
   return (
     <div className="App">
       <h2>Property Dividend History</h2>
@@ -215,6 +240,47 @@ function App() {
           ))}
         </tbody>
       </table>
+
+      {/* Line chart */}
+      <div className="chart-container">
+        <h3>Dividend Payment History</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="date" 
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis 
+              label={{ 
+                value: 'Dividend per Share ($)', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { textAnchor: 'middle' }
+              }}
+            />
+            <Tooltip 
+              formatter={(value) => value ? [`$${value}`, 'Dividend'] : ['-', 'Dividend']}
+              labelStyle={{ color: 'var(--arrived-primary)' }}
+              contentStyle={{ 
+                backgroundColor: 'white',
+                border: '1px solid var(--arrived-border)',
+                borderRadius: '4px'
+              }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="amount" 
+              stroke="var(--arrived-accent)" 
+              strokeWidth={2}
+              dot={{ fill: 'var(--arrived-accent)' }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
