@@ -19,6 +19,7 @@ type AcquisitionDate = {
 type ChartDataPoint = {
   date: string;
   amount: number | null;
+  averageYield?: number | null;
 };
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAnnualizedYield, setShowAnnualizedYield] = useState(false);
+  const [showAverageYield, setShowAverageYield] = useState(false);
 
   useEffect(() => {
     Papa.parse("/Dividend payment data.csv", {
@@ -153,6 +155,25 @@ function App() {
     return dividend ? dividend.dividendPerShare : 0;
   }
 
+  // Calculate all-time average yield for the selected property
+  const calculateAverageYield = () => {
+    if (!selectedProperty) return null;
+
+    const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty);
+    const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
+    
+    if (!propertyDividends.length || !acquisitionDate) return null;
+
+    const endDate = new Date(2025, 2, 31); // March 31, 2025
+    const totalDays = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Sum up all dividends
+    const totalDividends = propertyDividends.reduce((sum, div) => sum + div.dividendPerShare, 0);
+    
+    // Calculate annualized yield
+    return +((totalDividends / totalDays) * 365 / 10 * 100).toFixed(1);
+  };
+
   // Process data for the line chart
   const getChartData = (): ChartDataPoint[] => {
     if (!selectedProperty) return [
@@ -170,6 +191,7 @@ function App() {
       .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime());
 
     const monthlyData: ChartDataPoint[] = [];
+    const averageYield = calculateAverageYield();
     
     rawData.forEach(dividend => {
       const date = dividend.dividendDate;
@@ -197,7 +219,8 @@ function App() {
               year: 'numeric',
               month: 'short'
             }),
-            amount: annualizedYield
+            amount: annualizedYield,
+            averageYield: showAverageYield && showAnnualizedYield ? averageYield : null
           });
         });
       } else {
@@ -212,7 +235,8 @@ function App() {
             year: 'numeric',
             month: 'short'
           }),
-          amount: annualizedYield
+          amount: annualizedYield,
+          averageYield: showAverageYield && showAnnualizedYield ? averageYield : null
         });
       }
     });
@@ -333,17 +357,29 @@ function App() {
       <div className="chart-container">
         <div className="chart-header">
           <h3>Monthly Dividend Payment History</h3>
-          <div className="chart-toggle">
-            <div 
-              className={`toggle-switch ${showAnnualizedYield ? 'checked' : ''}`}
-              onClick={() => setShowAnnualizedYield(!showAnnualizedYield)}
-            >
-              <div className="toggle-slider"></div>
-              <div className="toggle-icons">
-                <span>$</span>
-                <span>%</span>
+          <div className="chart-controls">
+            <div className="chart-toggle">
+              <div 
+                className={`toggle-switch ${showAnnualizedYield ? 'checked' : ''}`}
+                onClick={() => setShowAnnualizedYield(!showAnnualizedYield)}
+              >
+                <div className="toggle-slider"></div>
+                <div className="toggle-icons">
+                  <span>$</span>
+                  <span>%</span>
+                </div>
               </div>
             </div>
+            {showAnnualizedYield && (
+              <label className="average-yield-toggle">
+                <input
+                  type="checkbox"
+                  checked={showAverageYield}
+                  onChange={(e) => setShowAverageYield(e.target.checked)}
+                />
+                <span>Show All-Time Average</span>
+              </label>
+            )}
           </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
@@ -370,7 +406,12 @@ function App() {
               tickFormatter={(value) => showAnnualizedYield ? `${value}%` : `$${value}`}
             />
             <Tooltip 
-              formatter={(value) => value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend']}
+              formatter={(value, name) => {
+                if (name === 'averageYield') {
+                  return value ? [`${value}%`, 'All-Time Average'] : ['-', 'All-Time Average'];
+                }
+                return value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'];
+              }}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 
                 backgroundColor: 'white',
@@ -386,6 +427,16 @@ function App() {
               dot={{ fill: 'var(--arrived-accent)' }}
               activeDot={{ r: 6 }}
             />
+            {showAverageYield && showAnnualizedYield && (
+              <Line 
+                type="monotone" 
+                dataKey="averageYield" 
+                stroke="#FF6B6B"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 5"
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
         <p className="chart-note">
@@ -394,6 +445,9 @@ function App() {
         </p>
         <p className="chart-data-note">
           Data for the line chart begins with the first dividend payment.
+        </p>
+        <p className="chart-data-note">
+          Annualized Yield is calculated by taking that month's dividend and extrapolating for a full year. It's based off a $10 per share purchase price. 
         </p>
       </div>
     </div>
