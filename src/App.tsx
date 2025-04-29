@@ -122,6 +122,17 @@ function App() {
     return wasPaid(year, monthIdx);
   }
 
+  // Helper: Get dividend amount for a given year/month
+  function getDividendAmount(year: number, monthIdx: number) {
+    const dividend = dividends.find(d =>
+      d.propertyName === selectedProperty &&
+      d.dividendDate.getFullYear() === year &&
+      d.dividendDate.getMonth() === monthIdx &&
+      d.dividendPerShare > 0
+    );
+    return dividend ? dividend.dividendPerShare : 0;
+  }
+
   return (
     <div className="App">
       <h2>Arrived Property Dividend History</h2>
@@ -149,15 +160,23 @@ function App() {
             {years.map(year => (
               <tr key={year}>
                 <td style={{ border: '1px solid #ccc', padding: '4px', fontWeight: 'bold' }}>{year}</td>
-                {months.map((m, idx) => (
-                  <td key={m} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
-                    {wasPaidOrBlank(year, idx) === null
-                      ? ''
-                      : wasPaidOrBlank(year, idx)
-                        ? '✅'
-                        : '❌'}
-                  </td>
-                ))}
+                {months.map((m, idx) => {
+                  const paid = wasPaidOrBlank(year, idx);
+                  const dividendAmount = paid ? getDividendAmount(year, idx) : 0;
+                  return (
+                    <td 
+                      key={m} 
+                      style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}
+                      title={paid === null ? '' : `$${dividendAmount.toFixed(2)}`}
+                    >
+                      {paid === null
+                        ? ''
+                        : paid
+                          ? '✅'
+                          : '❌'}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
