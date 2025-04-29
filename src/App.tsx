@@ -25,7 +25,11 @@ type ValuationRecord = {
 type ChartDataPoint = {
   date: string;
   amount: number | null;
-  averageYield?: number | null;
+};
+
+type ValuationChartPoint = {
+  date: string;
+  value: number | null;
 };
 
 function App() {
@@ -218,7 +222,7 @@ function App() {
       .filter(d => d.propertyName === selectedProperty)
       .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime());
 
-    const monthlyData: ChartDataPoint[] = [];
+    const monthlyData: (ChartDataPoint & { averageYield?: number | null })[] = [];
     const averageYield = calculateAverageYield();
     
     rawData.forEach(dividend => {
@@ -248,7 +252,7 @@ function App() {
               month: 'short'
             }),
             amount: annualizedYield,
-            averageYield: showAverageYield && showAnnualizedYield ? averageYield : null
+            averageYield: showAnnualizedYield ? averageYield : null
           });
         });
       } else {
@@ -264,7 +268,7 @@ function App() {
             month: 'short'
           }),
           amount: annualizedYield,
-          averageYield: showAverageYield && showAnnualizedYield ? averageYield : null
+          averageYield: showAnnualizedYield ? averageYield : null
         });
       }
     });
@@ -353,32 +357,103 @@ function App() {
     };
   };
 
-  // Calculate valuation metrics for selected property
-  const calculateValuationMetrics = () => {
-    if (!selectedProperty) return null;
+  // Get valuation chart data
+  const getValuationChartData = (): ValuationChartPoint[] => {
+    if (!selectedProperty) return [];
+
+    const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
+    if (!acquisitionDate) return [];
 
     const propertyValuations = valuations
       .filter(v => v.propertyName === selectedProperty)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    if (propertyValuations.length < 1) return null;
+    const chartData: ValuationChartPoint[] = [];
 
-    const initialValuation = propertyValuations[0].valuation;
-    const currentValuation = propertyValuations[propertyValuations.length - 1].valuation;
-    const totalAppreciation = ((currentValuation - initialValuation) / initialValuation) * 100;
-    
-    // Calculate annualized appreciation
-    const firstDate = propertyValuations[0].date;
-    const lastDate = propertyValuations[propertyValuations.length - 1].date;
-    const yearsBetween = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    const annualizedAppreciation = ((Math.pow(1 + totalAppreciation / 100, 1 / yearsBetween) - 1) * 100);
+    // Add acquisition date point with $10 value
+    chartData.push({
+      date: acquisitionDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short'
+      }),
+      value: 10
+    });
+
+    // If there are no valuations, add one more point at the end with $10
+    if (propertyValuations.length === 0) {
+      const today = new Date();
+      chartData.push({
+        date: today.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short'
+        }),
+        value: 10
+      });
+      return chartData;
+    }
+
+    // If the first valuation is after the acquisition date, add $10 points until first valuation
+    if (propertyValuations[0].date > acquisitionDate) {
+      const monthsBetween = (propertyValuations[0].date.getMonth() - acquisitionDate.getMonth()) +
+        12 * (propertyValuations[0].date.getFullYear() - acquisitionDate.getFullYear());
+      
+      for (let i = 1; i < monthsBetween; i++) {
+        const date = new Date(acquisitionDate);
+        date.setMonth(date.getMonth() + i);
+        chartData.push({
+          date: date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short'
+          }),
+          value: 10
+        });
+      }
+    }
+
+    // Add all valuation points
+    propertyValuations.forEach(valuation => {
+      chartData.push({
+        date: valuation.date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short'
+        }),
+        value: valuation.valuation
+      });
+    });
+
+    return chartData;
+  };
+
+  // Calculate valuation metrics
+  const calculateValuationMetrics = () => {
+    if (!selectedProperty) return {
+      currentValuation: null,
+      appreciationPerShare: null,
+      appreciationPercent: null,
+      totalGrossReturn: null
+    };
+
+    const propertyValuations = valuations
+      .filter(v => v.propertyName === selectedProperty)
+      .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date descending
+
+    if (propertyValuations.length === 0) return {
+      currentValuation: 10, // If no valuations, return initial $10 value
+      appreciationPerShare: 0,
+      appreciationPercent: 0,
+      totalGrossReturn: (calculateDividendStats().totalDividends / 10 * 100)
+    };
+
+    const currentValuation = propertyValuations[0].valuation;
+    const appreciationPerShare = currentValuation - 10;
+    const appreciationPercent = (appreciationPerShare / 10) * 100;
+    const totalGrossReturn = ((appreciationPerShare + calculateDividendStats().totalDividends) / 10) * 100;
 
     return {
-      initialValuation,
       currentValuation,
-      totalAppreciation: totalAppreciation.toFixed(1),
-      annualizedAppreciation: annualizedAppreciation.toFixed(1),
-      valuationHistory: propertyValuations
+      appreciationPerShare,
+      appreciationPercent,
+      totalGrossReturn
     };
   };
 
@@ -547,6 +622,7 @@ function App() {
                 strokeWidth={2}
                 dot={false}
                 strokeDasharray="5 5"
+                isAnimationActive={false}
               />
             )}
           </LineChart>
@@ -565,6 +641,56 @@ function App() {
 
       {selectedProperty && (
         <>
+          {/* Valuation Chart */}
+          <div className="chart-container">
+            <h3>Arrived Valuation History</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={getValuationChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={2}
+                />
+                <YAxis 
+                  label={{ 
+                    value: 'Arrived Valuation ($)', 
+                    angle: -90, 
+                    position: 'insideLeft',
+                    offset: -40,
+                    style: { 
+                      textAnchor: 'middle',
+                      fontSize: '0.9rem'
+                    }
+                  }}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Tooltip 
+                  formatter={(value) => [`$${value}`, 'Arrived Valuation']}
+                  labelStyle={{ color: 'var(--arrived-primary)' }}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid var(--arrived-border)',
+                    borderRadius: '4px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="var(--arrived-accent)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--arrived-accent)' }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="chart-note">
+              Share value starts at $10 (IPO price) and updates based on Arrived's periodic valuations.
+            </p>
+          </div>
+
           <div className="returns-summary">
             <h3>Returns Summary</h3>
             <div className="returns-metric">
@@ -611,40 +737,43 @@ function App() {
                 Total Gross Yield (Total Dividends / $10 Share Price)
               </span>
             </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                ${calculateValuationMetrics().currentValuation?.toFixed(2)}
+              </span>
+              <span className="returns-metric-label">
+                Current Arrived Valuation
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                ${calculateValuationMetrics().appreciationPerShare?.toFixed(2)}
+              </span>
+              <span className="returns-metric-label">
+                Appreciation Per Share
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateValuationMetrics().appreciationPercent?.toFixed(1)}%
+              </span>
+              <span className="returns-metric-label">
+                Appreciation Per Share %
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateValuationMetrics().totalGrossReturn?.toFixed(1)}%
+              </span>
+              <span className="returns-metric-label">
+                Total Gross Return (Appreciation + Dividends)
+              </span>
+            </div>
           </div>
 
           <div className="returns-summary">
             <h3>Secondary Market Modeling</h3>
-            {calculateValuationMetrics() ? (
-              <>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    ${calculateValuationMetrics()?.currentValuation.toLocaleString()}
-                  </span>
-                  <span className="returns-metric-label">
-                    Current Valuation
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateValuationMetrics()?.totalAppreciation}%
-                  </span>
-                  <span className="returns-metric-label">
-                    Total Appreciation Since First Valuation
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateValuationMetrics()?.annualizedAppreciation}%
-                  </span>
-                  <span className="returns-metric-label">
-                    Annualized Appreciation Rate
-                  </span>
-                </div>
-              </>
-            ) : (
-              <p className="placeholder-text">No valuation data available for this property.</p>
-            )}
+            <p className="placeholder-text">Future metrics for secondary market analysis will appear here.</p>
           </div>
         </>
       )}
