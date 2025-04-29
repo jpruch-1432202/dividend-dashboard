@@ -213,9 +213,30 @@ function App() {
     });
   };
 
+  // Calculate dividend payment success rate
+  const calculateSuccessRate = () => {
+    if (!selectedProperty) return null;
+
+    let successCount = 0;
+    let totalCount = 0;
+
+    years.forEach(year => {
+      months.forEach((_, monthIdx) => {
+        const paid = wasPaidOrBlank(year, monthIdx);
+        // Only count non-null values (actual payment opportunities)
+        if (paid !== null) {
+          totalCount++;
+          if (paid) successCount++;
+        }
+      });
+    });
+
+    return totalCount > 0 ? (successCount / totalCount) * 100 : null;
+  };
+
   return (
     <div className="App">
-      <h2>Property Dividend History</h2>
+      <h2>Arrived Property Dividend History</h2>
       <div className="property-selector">
         <div className="search-container">
           <input
@@ -246,6 +267,18 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* Success Rate Display */}
+      {selectedProperty && (
+        <div className="success-rate">
+          <p>
+            The <span className="property-name">{selectedProperty}</span> has paid{' '}
+            <span className="rate-value">{calculateSuccessRate()?.toFixed(1)}%</span>{' '}
+            of possible dividends
+          </p>
+        </div>
+      )}
+
       {/* Table grid chart */}
       <table>
         <thead>
@@ -288,21 +321,25 @@ function App() {
       <div className="chart-container">
         <h3>Monthly Dividend Payment History</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+          <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="date" 
               angle={-45}
               textAnchor="end"
               height={60}
-              interval={2}  // Show every third label to prevent overcrowding
+              interval={2}
             />
             <YAxis 
               label={{ 
                 value: 'Monthly Dividend per Share ($)', 
                 angle: -90, 
                 position: 'insideLeft',
-                style: { textAnchor: 'middle' }
+                offset: -40,
+                style: { 
+                  textAnchor: 'middle',
+                  fontSize: '0.9rem'
+                }
               }}
             />
             <Tooltip 
@@ -327,6 +364,9 @@ function App() {
         <p className="chart-note">
           Note: Prior to January 2024, dividends were paid quarterly (every 3 months). For comparison purposes, 
           these quarterly payments have been divided evenly across their respective months to match the current monthly payment structure.
+        </p>
+        <p className="chart-data-note">
+          Data for the line chart begins with the first dividend payment.
         </p>
       </div>
     </div>

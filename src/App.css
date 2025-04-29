@@ -241,9 +241,67 @@ td[title]:hover::after {
   font-style: italic;
 }
 
+.chart-data-note {
+  color: var(--arrived-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0.5rem auto 0;
+  max-width: 800px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .chart-note {
     font-size: 0.8rem;
     margin: 0.75rem 0.5rem 0;
+  }
+
+  .chart-data-note {
+    font-size: 0.8rem;
+    margin: 0.5rem 0.5rem 0;
+  }
+}
+
+.success-rate {
+  text-align: center;
+  margin: 1rem auto;
+  padding: 0.5rem;
+  max-width: 600px;
+}
+
+.success-rate p {
+  color: var(--arrived-secondary);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.property-name {
+  color: var(--arrived-accent);
+  font-weight: 600;
+}
+
+.rate-value {
+  color: var(--arrived-primary);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.rate-explanation {
+  color: var(--arrived-secondary);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .success-rate p {
+    font-size: 1rem;
+  }
+
+  .rate-value {
+    font-size: 1.1rem;
+  }
+
+  .rate-explanation {
+    font-size: 0.8rem;
   }
 }
