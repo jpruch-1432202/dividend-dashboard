@@ -1,11 +1,14 @@
 :root {
+  /* Arrived's brand colors */
   --arrived-primary: #1A1A1A;
   --arrived-secondary: #4A4A4A;
   --arrived-accent: #00A0E9;
-  --arrived-background: #FFFFFF;
-  --arrived-border: #E5E5E5;
   --arrived-success: #00C853;
   --arrived-error: #FF3D00;
+  --arrived-background: #FFFFFF;
+  --arrived-border: #E5E5E5;
+  --arrived-hover: #F8F9FA;
+  --arrived-shadow: rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -33,6 +36,11 @@ h2 {
   text-align: center;
 }
 
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
 input {
   font-family: 'Inter', sans-serif;
   font-size: 1rem;
@@ -43,7 +51,8 @@ input {
   max-width: 400px;
   margin: 0 auto;
   display: block;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
+  background-color: var(--arrived-background);
 }
 
 input:focus {
@@ -52,63 +61,9 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(0, 160, 233, 0.1);
 }
 
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 2rem auto;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-th, td {
-  padding: 1rem;
-  text-align: center;
-  border: 1px solid var(--arrived-border);
-}
-
-th {
-  background-color: #F8F9FA;
-  font-weight: 600;
-  color: var(--arrived-secondary);
-}
-
-td {
-  transition: background-color 0.2s ease;
-}
-
-td:hover {
-  background-color: #F8F9FA;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .App {
-    padding: 1rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  table {
-    font-size: 0.9rem;
-  }
-
-  th, td {
-    padding: 0.75rem 0.5rem;
-  }
-}
-
 .property-selector {
   margin: 2rem auto;
   max-width: 400px;
-}
-
-.search-container {
-  position: relative;
 }
 
 .property-dropdown {
@@ -116,13 +71,13 @@ td:hover {
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--arrived-background);
   border: 1px solid var(--arrived-border);
   border-radius: 8px;
   margin-top: 4px;
   max-height: 300px;
   overflow-y: auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--arrived-shadow);
   z-index: 10;
 }
 
@@ -133,7 +88,7 @@ td:hover {
 }
 
 .property-option:hover {
-  background-color: #F8F9FA;
+  background-color: var(--arrived-hover);
 }
 
 .property-option.selected {
@@ -141,33 +96,42 @@ td:hover {
   color: var(--arrived-accent);
 }
 
-/* Add smooth scrollbar for the dropdown */
-.property-dropdown::-webkit-scrollbar {
-  width: 8px;
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 2rem auto;
+  background: var(--arrived-background);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--arrived-shadow);
+  font-size: 14px;
 }
 
-.property-dropdown::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+th, td {
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--arrived-border);
 }
 
-.property-dropdown::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
+th {
+  background-color: var(--arrived-hover);
+  font-weight: 600;
+  color: var(--arrived-secondary);
 }
 
-.property-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #999;
+td {
+  transition: background-color 0.2s ease;
+  font-size: 1.2rem;
+}
+
+td:hover {
+  background-color: var(--arrived-hover);
 }
 
 .year-cell {
   font-weight: 600;
-  background-color: #F8F9FA;
-}
-
-/* Checkmark and X styling */
-td {
-  font-size: 1.2rem;
+  background-color: var(--arrived-hover);
 }
 
 td[title]:hover::after {
@@ -185,22 +149,54 @@ td[title]:hover::after {
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .App {
-    padding: 1rem;
+    padding: 0.5rem;
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
   }
 
   table {
-    font-size: 0.9rem;
+    font-size: 11px;
+    margin: 1rem auto;
   }
 
   th, td {
-    padding: 0.75rem 0.5rem;
+    padding: 4px 2px;
   }
   
   td {
-    font-size: 1rem;
+    font-size: 14px;
+  }
+
+  /* Make the year column more compact */
+  .year-cell {
+    padding: 4px;
+    font-size: 11px;
+  }
+
+  /* Adjust checkmark/x size */
+  td {
+    line-height: 1;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 380px) {
+  table {
+    font-size: 10px;
+  }
+
+  th, td {
+    padding: 3px 1px;
+  }
+
+  td {
+    font-size: 12px;
+  }
+
+  .year-cell {
+    font-size: 10px;
   }
 }

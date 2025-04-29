@@ -147,7 +147,7 @@ function App() {
 
   return (
     <div className="App">
-      <h2>Arrived Property Dividend History</h2>
+      <h2>Property Dividend History</h2>
       <div className="property-selector">
         <div className="search-container">
           <input
