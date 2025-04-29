@@ -15,6 +15,12 @@ type AcquisitionDate = {
   escrowClose: Date;
 };
 
+type ValuationRecord = {
+  propertyName: string;
+  date: Date;
+  valuation: number;
+};
+
 // Define the type for chart data points
 type ChartDataPoint = {
   date: string;
@@ -26,12 +32,14 @@ function App() {
   const [dividends, setDividends] = useState<DividendRecord[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
   const [acquisitionDates, setAcquisitionDates] = useState<AcquisitionDate[]>([]);
+  const [valuations, setValuations] = useState<ValuationRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [showAnnualizedYield, setShowAnnualizedYield] = useState(false);
+  const [showAnnualizedYield, setShowAnnualizedYield] = useState(true);
   const [showAverageYield, setShowAverageYield] = useState(false);
 
   useEffect(() => {
+    // Load dividend data
     Papa.parse("/Dividend payment data.csv", {
       download: true,
       header: true,
@@ -54,6 +62,7 @@ function App() {
         );
       },
     });
+
     // Load acquisition dates
     Papa.parse("/escrow close dates.csv", {
       download: true,
@@ -66,6 +75,24 @@ function App() {
             .map((row) => ({
               propertyName: row["Property Name"],
               escrowClose: new Date(row["Escrow close"]),
+            }))
+        );
+      },
+    });
+
+    // Load valuations
+    Papa.parse("/Arrived Valuations.csv", {
+      download: true,
+      header: true,
+      complete: (results: any) => {
+        const data = results.data as any[];
+        setValuations(
+          data
+            .filter((row) => row["Property Name"] && row["Date"] && row["Valuation"])
+            .map((row) => ({
+              propertyName: row["Property Name"],
+              date: new Date(row["Date"]),
+              valuation: parseFloat(row["Valuation"]),
             }))
         );
       },
@@ -171,7 +198,8 @@ function App() {
     const totalDividends = propertyDividends.reduce((sum, div) => sum + div.dividendPerShare, 0);
     
     // Calculate annualized yield
-    return +((totalDividends / totalDays) * 365 / 10 * 100).toFixed(1);
+    const yieldValue = ((totalDividends / totalDays) * 365 / 10 * 100);
+    return Number(yieldValue.toFixed(1));
   };
 
   // Process data for the line chart
@@ -250,24 +278,108 @@ function App() {
   };
 
   // Calculate dividend payment success rate
-  const calculateSuccessRate = () => {
-    if (!selectedProperty) return null;
+  const calculateDividendStats = () => {
+    if (!selectedProperty) return { 
+      successRate: null, 
+      paidCount: 0, 
+      totalCount: 0,
+      totalDividends: 0,
+      grossYield: 0,
+      ttmYield: 0
+    };
 
-    let successCount = 0;
+    let paidCount = 0;
     let totalCount = 0;
+    let totalDividends = 0;
+    let ttmYield = 0;
 
+    // Calculate TTM yield or annualized yield for newer properties
+    if (selectedProperty) {
+      const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty);
+      const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
+      
+      if (acquisitionDate) {
+        const today = new Date();
+        const twelveMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+        const daysSinceAcquisition = Math.floor((today.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysSinceAcquisition >= 365) {
+          // Property is older than 12 months - use actual TTM
+          const ttmDividends = propertyDividends
+            .filter(d => d.dividendDate >= twelveMonthsAgo)
+            .reduce((sum, div) => sum + div.dividendPerShare, 0);
+          const ttmYieldValue = (ttmDividends / 10 * 100);
+          ttmYield = Number(ttmYieldValue.toFixed(1));
+        } else {
+          // Property is newer than 12 months - annualize the returns
+          const totalDividendsSinceAcquisition = propertyDividends
+            .reduce((sum, div) => sum + div.dividendPerShare, 0);
+          const annualizedYieldValue = ((totalDividendsSinceAcquisition / daysSinceAcquisition) * 365 / 10 * 100);
+          ttmYield = Number(annualizedYieldValue.toFixed(1));
+        }
+      }
+    }
+
+    // Calculate success rate
     years.forEach(year => {
       months.forEach((_, monthIdx) => {
         const paid = wasPaidOrBlank(year, monthIdx);
         // Only count non-null values (actual payment opportunities)
         if (paid !== null) {
           totalCount++;
-          if (paid) successCount++;
+          if (paid) paidCount++;
         }
       });
     });
 
-    return totalCount > 0 ? (successCount / totalCount) * 100 : null;
+    // Calculate total dividends paid
+    if (selectedProperty) {
+      totalDividends = dividends
+        .filter(d => d.propertyName === selectedProperty)
+        .reduce((sum, div) => sum + div.dividendPerShare, 0);
+    }
+
+    const grossYieldValue = (totalDividends / 10 * 100);
+    const grossYield = Number(grossYieldValue.toFixed(1));
+    const successRate = totalCount > 0 ? Number((paidCount / totalCount * 100).toFixed(1)) : null;
+
+    return {
+      successRate,
+      paidCount,
+      totalCount,
+      totalDividends: Number(totalDividends.toFixed(2)),
+      grossYield,
+      ttmYield
+    };
+  };
+
+  // Calculate valuation metrics for selected property
+  const calculateValuationMetrics = () => {
+    if (!selectedProperty) return null;
+
+    const propertyValuations = valuations
+      .filter(v => v.propertyName === selectedProperty)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    if (propertyValuations.length < 1) return null;
+
+    const initialValuation = propertyValuations[0].valuation;
+    const currentValuation = propertyValuations[propertyValuations.length - 1].valuation;
+    const totalAppreciation = ((currentValuation - initialValuation) / initialValuation) * 100;
+    
+    // Calculate annualized appreciation
+    const firstDate = propertyValuations[0].date;
+    const lastDate = propertyValuations[propertyValuations.length - 1].date;
+    const yearsBetween = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    const annualizedAppreciation = ((Math.pow(1 + totalAppreciation / 100, 1 / yearsBetween) - 1) * 100);
+
+    return {
+      initialValuation,
+      currentValuation,
+      totalAppreciation: totalAppreciation.toFixed(1),
+      annualizedAppreciation: annualizedAppreciation.toFixed(1),
+      valuationHistory: propertyValuations
+    };
   };
 
   return (
@@ -309,7 +421,7 @@ function App() {
         <div className="success-rate">
           <p>
             The <span className="property-name">{selectedProperty}</span> has paid{' '}
-            <span className="rate-value">{calculateSuccessRate()?.toFixed(1)}%</span>{' '}
+            <span className="rate-value">{calculateDividendStats().successRate}%</span>{' '}
             of possible dividends
           </p>
         </div>
@@ -450,6 +562,92 @@ function App() {
           Annualized Yield is calculated by taking that month's dividend and extrapolating for a full year. It's based off a $10 per share purchase price. 
         </p>
       </div>
+
+      {selectedProperty && (
+        <>
+          <div className="returns-summary">
+            <h3>Returns Summary</h3>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateAverageYield()?.toFixed(1)}%
+              </span>
+              <span className="returns-metric-label">
+                All-Time Average Dividend Yield
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateDividendStats().ttmYield.toFixed(1)}%
+              </span>
+              <span className="returns-metric-label">
+                Trailing 12-Month Dividend Yield{' '}
+                {acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose &&
+                 (new Date().getTime() - acquisitionDates.find(a => a.propertyName === selectedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
+                  ? '(Annualized)' 
+                  : ''}
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateDividendStats().paidCount}
+              </span>
+              <span className="returns-metric-label">
+                Dividends Paid ({calculateDividendStats().successRate?.toFixed(1)}% of possible dividends)
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                ${calculateDividendStats().totalDividends.toFixed(2)}
+              </span>
+              <span className="returns-metric-label">
+                All-Time Dividends Paid Per Share
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {calculateDividendStats().grossYield.toFixed(1)}%
+              </span>
+              <span className="returns-metric-label">
+                Total Gross Yield (Total Dividends / $10 Share Price)
+              </span>
+            </div>
+          </div>
+
+          <div className="returns-summary">
+            <h3>Secondary Market Modeling</h3>
+            {calculateValuationMetrics() ? (
+              <>
+                <div className="returns-metric">
+                  <span className="returns-metric-value">
+                    ${calculateValuationMetrics()?.currentValuation.toLocaleString()}
+                  </span>
+                  <span className="returns-metric-label">
+                    Current Valuation
+                  </span>
+                </div>
+                <div className="returns-metric">
+                  <span className="returns-metric-value">
+                    {calculateValuationMetrics()?.totalAppreciation}%
+                  </span>
+                  <span className="returns-metric-label">
+                    Total Appreciation Since First Valuation
+                  </span>
+                </div>
+                <div className="returns-metric">
+                  <span className="returns-metric-value">
+                    {calculateValuationMetrics()?.annualizedAppreciation}%
+                  </span>
+                  <span className="returns-metric-label">
+                    Annualized Appreciation Rate
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="placeholder-text">No valuation data available for this property.</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

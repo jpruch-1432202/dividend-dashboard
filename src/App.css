@@ -421,3 +421,71 @@ td[title]:hover::after {
     gap: 0.5rem;
   }
 }
+
+.returns-summary {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.returns-summary h3 {
+  color: var(--arrived-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+}
+
+.returns-metric {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+
+.returns-metric-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--arrived-accent);
+  margin-right: 0.5rem;
+}
+
+.returns-metric-label {
+  font-size: 1rem;
+  color: var(--arrived-secondary);
+}
+
+@media (max-width: 768px) {
+  .returns-summary {
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .returns-summary h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .returns-metric-value {
+    font-size: 1.5rem;
+  }
+
+  .returns-metric-label {
+    font-size: 0.9rem;
+  }
+}
+
+.placeholder-text {
+  color: var(--arrived-secondary);
+  font-style: italic;
+  text-align: center;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .placeholder-text {
+    font-size: 0.8rem;
+    margin: 0.75rem 0;
+  }
+}
