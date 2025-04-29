@@ -27,6 +27,7 @@ function App() {
   const [acquisitionDates, setAcquisitionDates] = useState<AcquisitionDate[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showAnnualizedYield, setShowAnnualizedYield] = useState(false);
 
   useEffect(() => {
     Papa.parse("/Dividend payment data.csv", {
@@ -185,22 +186,33 @@ function App() {
         // Add a data point for each month in the quarter
         monthsInQuarter.forEach(monthNum => {
           const adjustedMonth = new Date(date.getFullYear(), monthNum, 1);
+          const daysInMonth = new Date(date.getFullYear(), monthNum + 1, 0).getDate();
+          const monthlyAmount = +(dividend.dividendPerShare / 3).toFixed(3);
+          const annualizedYield = showAnnualizedYield 
+            ? +((monthlyAmount / daysInMonth) * 365 / 10 * 100).toFixed(1)
+            : monthlyAmount;
+
           monthlyData.push({
             date: adjustedMonth.toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short'
             }),
-            amount: +(dividend.dividendPerShare / 3).toFixed(3) // Round to 3 decimal places
+            amount: annualizedYield
           });
         });
       } else {
         // For 2024 onwards, use the actual monthly payment
+        const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        const annualizedYield = showAnnualizedYield
+          ? +((dividend.dividendPerShare / daysInMonth) * 365 / 10 * 100).toFixed(1)
+          : dividend.dividendPerShare;
+
         monthlyData.push({
           date: date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short'
           }),
-          amount: dividend.dividendPerShare
+          amount: annualizedYield
         });
       }
     });
@@ -319,7 +331,21 @@ function App() {
 
       {/* Line chart */}
       <div className="chart-container">
-        <h3>Monthly Dividend Payment History</h3>
+        <div className="chart-header">
+          <h3>Monthly Dividend Payment History</h3>
+          <div className="chart-toggle">
+            <div 
+              className={`toggle-switch ${showAnnualizedYield ? 'checked' : ''}`}
+              onClick={() => setShowAnnualizedYield(!showAnnualizedYield)}
+            >
+              <div className="toggle-slider"></div>
+              <div className="toggle-icons">
+                <span>$</span>
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -332,7 +358,7 @@ function App() {
             />
             <YAxis 
               label={{ 
-                value: 'Monthly Dividend per Share ($)', 
+                value: showAnnualizedYield ? 'Annualized Dividend Yield (%)' : 'Monthly Dividend per Share ($)', 
                 angle: -90, 
                 position: 'insideLeft',
                 offset: -40,
@@ -341,9 +367,10 @@ function App() {
                   fontSize: '0.9rem'
                 }
               }}
+              tickFormatter={(value) => showAnnualizedYield ? `${value}%` : `$${value}`}
             />
             <Tooltip 
-              formatter={(value) => value ? [`$${value}`, 'Monthly Dividend'] : ['-', 'Monthly Dividend']}
+              formatter={(value) => value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend']}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 
                 backgroundColor: 'white',

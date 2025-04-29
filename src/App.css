@@ -203,11 +203,94 @@ td[title]:hover::after {
 
 /* Chart styles */
 .chart-container {
-  margin: 3rem auto;
+  margin-top: 2rem;
   padding: 1rem;
-  background: var(--arrived-background);
+  background-color: white;
   border-radius: 8px;
-  box-shadow: 0 1px 3px var(--arrived-shadow);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.chart-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 80px;
+  height: 30px;
+  background-color: white;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  overflow: hidden;
+  border: 1px solid var(--arrived-border);
+}
+
+.toggle-slider {
+  position: absolute;
+  width: 40px;
+  height: 30px;
+  background-color: var(--arrived-accent);
+  transition: transform 0.3s ease;
+  z-index: 0;
+}
+
+.toggle-switch.checked .toggle-slider {
+  transform: translateX(40px);
+}
+
+.toggle-icons {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 1;
+}
+
+.toggle-icons span {
+  font-weight: bold;
+  font-size: 1rem;
+  width: 40px;
+  text-align: center;
+  transition: color 0.3s ease;
+  color: var(--arrived-primary);
+}
+
+.toggle-switch .toggle-icons span:first-child {
+  color: var(--arrived-primary);
+}
+
+.toggle-switch .toggle-icons span:last-child {
+  color: var(--arrived-primary);
+}
+
+.toggle-switch:not(.checked) .toggle-icons span:first-child,
+.toggle-switch.checked .toggle-icons span:last-child {
+  color: white;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 0.5rem;
+}
+
+.toggle-text {
+  font-size: 0.9rem;
+  color: var(--arrived-text);
 }
 
 .chart-container h3 {
