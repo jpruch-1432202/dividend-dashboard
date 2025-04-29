@@ -15,6 +15,12 @@ type AcquisitionDate = {
   escrowClose: Date;
 };
 
+// Define the type for chart data points
+type ChartDataPoint = {
+  date: string;
+  amount: number | null;
+};
+
 function App() {
   const [dividends, setDividends] = useState<DividendRecord[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
@@ -147,7 +153,7 @@ function App() {
   }
 
   // Process data for the line chart
-  const getChartData = () => {
+  const getChartData = (): ChartDataPoint[] => {
     if (!selectedProperty) return [
       { date: 'Jan 2021', amount: null },
       { date: 'Jul 2021', amount: null },
@@ -158,16 +164,53 @@ function App() {
       { date: 'Jan 2024', amount: null }
     ];
     
-    return dividends
+    const rawData = dividends
       .filter(d => d.propertyName === selectedProperty)
-      .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime())
-      .map(d => ({
-        date: d.dividendDate.toLocaleDateString('en-US', { 
-          year: 'numeric',
-          month: 'short'
-        }),
-        amount: d.dividendPerShare
-      }));
+      .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime());
+
+    const monthlyData: ChartDataPoint[] = [];
+    
+    rawData.forEach(dividend => {
+      const date = dividend.dividendDate;
+      
+      // For payments before 2024, split into three monthly payments
+      if (date.getFullYear() < 2024 || (date.getFullYear() === 2023 && date.getMonth() === 11)) {
+        // Get the month numbers for the quarter (e.g., Dec payment covers Oct, Nov, Dec)
+        const monthsInQuarter = [
+          date.getMonth() - 2,
+          date.getMonth() - 1,
+          date.getMonth()
+        ];
+
+        // Add a data point for each month in the quarter
+        monthsInQuarter.forEach(monthNum => {
+          const adjustedMonth = new Date(date.getFullYear(), monthNum, 1);
+          monthlyData.push({
+            date: adjustedMonth.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short'
+            }),
+            amount: +(dividend.dividendPerShare / 3).toFixed(3) // Round to 3 decimal places
+          });
+        });
+      } else {
+        // For 2024 onwards, use the actual monthly payment
+        monthlyData.push({
+          date: date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short'
+          }),
+          amount: dividend.dividendPerShare
+        });
+      }
+    });
+
+    // Sort the data by date
+    return monthlyData.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateA.getTime() - dateB.getTime();
+    });
   };
 
   return (
@@ -243,7 +286,7 @@ function App() {
 
       {/* Line chart */}
       <div className="chart-container">
-        <h3>Dividend Payment History</h3>
+        <h3>Monthly Dividend Payment History</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -252,17 +295,18 @@ function App() {
               angle={-45}
               textAnchor="end"
               height={60}
+              interval={2}  // Show every third label to prevent overcrowding
             />
             <YAxis 
               label={{ 
-                value: 'Dividend per Share ($)', 
+                value: 'Monthly Dividend per Share ($)', 
                 angle: -90, 
                 position: 'insideLeft',
                 style: { textAnchor: 'middle' }
               }}
             />
             <Tooltip 
-              formatter={(value) => value ? [`$${value}`, 'Dividend'] : ['-', 'Dividend']}
+              formatter={(value) => value ? [`$${value}`, 'Monthly Dividend'] : ['-', 'Monthly Dividend']}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 
                 backgroundColor: 'white',
@@ -280,6 +324,10 @@ function App() {
             />
           </LineChart>
         </ResponsiveContainer>
+        <p className="chart-note">
+          Note: Prior to January 2024, dividends were paid quarterly (every 3 months). For comparison purposes, 
+          these quarterly payments have been divided evenly across their respective months to match the current monthly payment structure.
+        </p>
       </div>
     </div>
   );

@@ -230,3 +230,20 @@ td[title]:hover::after {
     margin-bottom: 1rem;
   }
 }
+
+.chart-note {
+  color: var(--arrived-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 1rem auto 0;
+  max-width: 800px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .chart-note {
+    font-size: 0.8rem;
+    margin: 0.75rem 0.5rem 0;
+  }
+}
