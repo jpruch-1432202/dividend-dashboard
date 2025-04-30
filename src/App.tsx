@@ -773,7 +773,7 @@ function App() {
           <div className="alert-content">
             <span className="alert-icon">ℹ️</span>
             <span className="alert-text">
-              This is a completed investment that was fully realized as of{' '}
+              This is an investment that was fully completed as of{' '}
               {completedInvestments.find(ci => ci.propertyName === displayedProperty)?.endingDate.toLocaleDateString('en-US', { 
                 month: 'long',
                 day: 'numeric',
