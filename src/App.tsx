@@ -579,12 +579,6 @@ function App() {
                       {property.ipoDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </span>
                   </div>
-                  <div className="property-detail">
-                    <span className="property-label">Current Arrived Valuation:</span>
-                    <span className="property-value">
-                      ${calculateValuationMetrics().currentValuation?.toFixed(2)}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))}
@@ -638,10 +632,10 @@ function App() {
                     {calculateDividendStats().ttmYield.toFixed(1)}%
                   </span>
                   <span className="returns-metric-label">
-                    Trailing 12-Month Dividend Yield (Based on $10/share cost){' '}
+                    Trailing 12-Month Dividend Yield (Based on $10/share cost)
                     {acquisitionDates.find(a => a.propertyName === displayedProperty)?.escrowClose &&
                      (new Date().getTime() - acquisitionDates.find(a => a.propertyName === displayedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
-                      ? '(Annualized)' 
+                      ? ' (Annualized)' 
                       : ''}
                   </span>
                 </div>
@@ -688,7 +682,19 @@ function App() {
                 )}
                 <div className="returns-metric">
                   <span className="returns-metric-value">
-                    ${calculateValuationMetrics().appreciationPerShare?.toFixed(2)}
+                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0
+                      ? "N/A"
+                      : `$${calculateValuationMetrics().currentValuation?.toFixed(2)}`}
+                  </span>
+                  <span className="returns-metric-label">
+                    Current Arrived Valuation
+                  </span>
+                </div>
+                <div className="returns-metric">
+                  <span className="returns-metric-value">
+                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0 
+                      ? "N/A"
+                      : `$${calculateValuationMetrics().appreciationPerShare?.toFixed(2)}`}
                   </span>
                   <span className="returns-metric-label">
                     Appreciation Per Share
@@ -696,7 +702,9 @@ function App() {
                 </div>
                 <div className="returns-metric">
                   <span className="returns-metric-value">
-                    {calculateValuationMetrics().appreciationPercent?.toFixed(1)}%
+                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0
+                      ? "N/A"
+                      : `${calculateValuationMetrics().appreciationPercent?.toFixed(1)}%`}
                   </span>
                   <span className="returns-metric-label">
                     Appreciation Per Share %
