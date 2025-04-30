@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./App.css";
@@ -86,6 +86,24 @@ function App() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAnnualizedYield, setShowAnnualizedYield] = useState(true);
   const [showAverageYield, setShowAverageYield] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Click outside handler
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     // Load dividend data
@@ -669,7 +687,7 @@ function App() {
     <div className="App">
       <h2>Arrived Property Historical Information</h2>
       <div className="property-selector">
-        <div className="search-container">
+        <div className="search-container" ref={searchContainerRef}>
           <input
             type="text"
             value={searchTerm}
@@ -878,7 +896,7 @@ function App() {
             <div className="returns-metric">
               <span className="returns-metric-value">
                 {displayedProperty ? (
-                  valuations.filter(v => v.propertyName === displayedProperty).length === 0 
+                  valuations.filter(v => v.propertyName === displayedProperty).length === 0
                     ? "N/A"
                     : (() => {
                         const value = calculateValuationMetrics().appreciationPerShare;
