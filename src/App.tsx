@@ -951,9 +951,25 @@ function App() {
           {years.map(year => (
             <tr key={year}>
               <td className="year-cell">{year}</td>
-              {months.map((m, idx) => (
-                <td key={m}></td>
-              ))}
+              {months.map((m, idx) => {
+                if (!displayedProperty) {
+                  return <td key={m}></td>;
+                }
+                const paid = wasPaidOrBlank(year, idx);
+                const dividendAmount = paid ? getDividendAmount(year, idx) : 0;
+                return (
+                  <td 
+                    key={m}
+                    {...(paid !== null ? { title: `$${dividendAmount.toFixed(2)}` } : {})}
+                  >
+                    {paid === null
+                      ? ''
+                      : paid
+                        ? '✅'
+                        : '❌'}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
