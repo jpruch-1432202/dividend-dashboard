@@ -291,15 +291,20 @@ function App() {
 
   // Process data for the line chart
   const getChartData = (): ChartDataPoint[] => {
-    if (!selectedProperty) return [
-      { date: 'Jan 2021', amount: null },
-      { date: 'Jul 2021', amount: null },
-      { date: 'Jan 2022', amount: null },
-      { date: 'Jul 2022', amount: null },
-      { date: 'Jan 2023', amount: null },
-      { date: 'Jul 2023', amount: null },
-      { date: 'Jan 2024', amount: null }
-    ];
+    if (!selectedProperty) {
+      // Return placeholder data with null values
+      return [
+        { date: 'Jan 2021', amount: null },
+        { date: 'Jul 2021', amount: null },
+        { date: 'Jan 2022', amount: null },
+        { date: 'Jul 2022', amount: null },
+        { date: 'Jan 2023', amount: null },
+        { date: 'Jul 2023', amount: null },
+        { date: 'Jan 2024', amount: null },
+        { date: 'Jul 2024', amount: null },
+        { date: 'Jan 2025', amount: null }
+      ];
+    }
     
     const rawData = dividends
       .filter(d => d.propertyName === selectedProperty)
@@ -443,7 +448,16 @@ function App() {
 
   // Get valuation chart data
   const getValuationChartData = (): ValuationChartPoint[] => {
-    if (!selectedProperty) return [];
+    if (!selectedProperty) {
+      // Return placeholder data with null values
+      return [
+        { date: 'Jan 2021', value: null },
+        { date: 'Jan 2022', value: null },
+        { date: 'Jan 2023', value: null },
+        { date: 'Jan 2024', value: null },
+        { date: 'Jan 2025', value: null }
+      ];
+    }
 
     const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
     if (!acquisitionDate) return [];
@@ -653,7 +667,7 @@ function App() {
 
   return (
     <div className="App">
-      <h2>Arrived Property Dividend History</h2>
+      <h2>Arrived Property Historical Information</h2>
       <div className="property-selector">
         <div className="search-container">
           <input
@@ -682,224 +696,230 @@ function App() {
         </div>
       </div>
 
-      {displayedProperty && (
-        <>
-          <div className="property-summary-section">
-            <h3>Property Summary</h3>
-            {propertyData.filter(p => p.propertyName === displayedProperty).map(property => (
-              <div key={property.propertyName} className="property-summary-grid">
-                <div className="property-summary-left">
-                  <div className="property-detail">
-                    <span className="property-label">Full Address:</span>
-                    <span className="property-value">{property.fullAddress}</span>
-                  </div>
-                  <div className="property-detail">
-                    <span className="property-label">Market:</span>
-                    <span className="property-value">{property.market}</span>
-                  </div>
-                  <div className="property-detail">
-                    <span className="property-label">Property Type:</span>
-                    <span className="property-value">{property.propertyType}</span>
-                  </div>
-                </div>
-                <div className="property-summary-right">
-                  <div className="property-detail">
-                    <span className="property-label">IPO Date:</span>
-                    <span className="property-value">
-                      {property.ipoDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </span>
-                  </div>
-                  <div className="property-detail">
-                    <span className="property-label">Time Since IPO:</span>
-                    <span className="property-value">
-                      {(() => {
-                        const endDate = new Date(2025, 2, 31); // March 31, 2025
-                        const days = Math.floor((endDate.getTime() - property.ipoDate.getTime()) / (1000 * 60 * 60 * 24));
-                        const years = (days / 365).toFixed(1);
-                        return `${years} years`;
-                      })()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Always show the structure, even without a selected property */}
+      <div className="property-summary-section">
+        <h3>Property Summary</h3>
+        <div className="property-summary-grid">
+          <div className="property-summary-left">
+            <div className="property-detail">
+              <span className="property-label">Full Address:</span>
+              <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.fullAddress : "—"}</span>
+            </div>
+            <div className="property-detail">
+              <span className="property-label">Market:</span>
+              <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.market : "—"}</span>
+            </div>
+            <div className="property-detail">
+              <span className="property-label">Property Type:</span>
+              <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.propertyType : "—"}</span>
+            </div>
           </div>
+          <div className="property-summary-right">
+            <div className="property-detail">
+              <span className="property-label">IPO Date:</span>
+              <span className="property-value">
+                {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.ipoDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "—"}
+              </span>
+            </div>
+            <div className="property-detail">
+              <span className="property-label">Time Since IPO:</span>
+              <span className="property-value">
+                {displayedProperty ? (() => {
+                  const property = propertyData.find(p => p.propertyName === displayedProperty);
+                  if (!property) return "—";
+                  const endDate = new Date(2025, 2, 31);
+                  const days = Math.floor((endDate.getTime() - property.ipoDate.getTime()) / (1000 * 60 * 60 * 24));
+                  return `${(days / 365).toFixed(1)} years`;
+                })() : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div className="returns-summary">
-            <h3>Returns Summary</h3>
-            <div className="returns-sections">
-              <div className="returns-section total-returns">
-                <h4>Total Returns</h4>
-                <div className="returns-metrics-container">
-                  <div className="returns-metric highlight">
-                    <span className="returns-metric-value">
-                      {calculateValuationMetrics().totalGrossReturn?.toFixed(1)}%
-                    </span>
-                    <span className="returns-metric-label">
-                      Total Gross Return
-                    </span>
-                  </div>
-                  <div className="returns-metric highlight">
-                    <span className="returns-metric-value">
-                      {(() => {
-                        const value = calculateDividendStats().totalDividends + (calculateValuationMetrics().appreciationPerShare || 0);
-                        return value < 0 ? `-$${Math.abs(value).toFixed(2)}` : `$${value.toFixed(2)}`;
-                      })()}
-                    </span>
-                    <span className="returns-metric-label">
-                      Total Gross Return Per Share
-                    </span>
-                  </div>
-                  <div className="returns-metric highlight">
-                    <span className="returns-metric-value">
-                      {calculateAverageAnnualReturn()?.toFixed(1)}%
-                    </span>
-                    <span className="returns-metric-label">
-                      Average Annual Return
-                    </span>
-                  </div>
-                  <div className="returns-metric highlight">
-                    <span className="returns-metric-value">
-                      {(() => {
-                        const irr = calculatePropertyIRR();
-                        return irr ? `${irr.toFixed(1)}%` : 'N/A';
-                      })()}
-                    </span>
-                    <span className="returns-metric-label">
-                      Internal Rate of Return (IRR)
-                      <InfoIcon 
-                        tooltip="IRR represents the annualized return rate that makes the present value of all cash flows equal to zero. It considers the $10 initial investment, all dividend payments, and the final property valuation as of March 31, 2025."
-                      />
-                    </span>
-                  </div>
-                </div>
+      <div className="returns-summary">
+        <h3>Returns Summary</h3>
+        <div className="returns-sections">
+          <div className="returns-section total-returns">
+            <h4>Total Returns</h4>
+            <div className="returns-metrics-container">
+              <div className="returns-metric highlight">
+                <span className="returns-metric-value">
+                  {displayedProperty ? `${calculateValuationMetrics().totalGrossReturn?.toFixed(1)}%` : "—"}
+                </span>
+                <span className="returns-metric-label">
+                  Total Gross Return
+                </span>
               </div>
-
-              <div className="returns-section dividends">
-                <h4>Dividends</h4>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateDividendStats().paidCount}
-                  </span>
-                  <span className="returns-metric-label">
-                    Dividends Paid ({calculateDividendStats().successRate?.toFixed(1)}% of possible dividends)
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateAverageYield()?.toFixed(1)}%
-                  </span>
-                  <span className="returns-metric-label">
-                    All-Time Average Dividend Yield (Based on $10/share cost)
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateDividendStats().ttmYield.toFixed(1)}%
-                  </span>
-                  <span className="returns-metric-label">
-                    Trailing 12-Month Dividend Yield (Based on $10/share cost)
-                    {acquisitionDates.find(a => a.propertyName === displayedProperty)?.escrowClose &&
-                     (new Date().getTime() - acquisitionDates.find(a => a.propertyName === displayedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
-                      ? ' (Annualized)' 
-                      : ''}
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateCurrentYield()?.toFixed(1)}%
-                  </span>
-                  <span className="returns-metric-label">
-                    Current Yield (TTM Dividends / Current Valuation)
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    ${calculateDividendStats().totalDividends.toFixed(2)}
-                  </span>
-                  <span className="returns-metric-label">
-                    All-Time Dividends Per Share
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {calculateDividendStats().grossYield.toFixed(1)}%
-                  </span>
-                  <span className="returns-metric-label">
-                    Gross Dividend Yield (Total Dividends / $10)
-                  </span>
-                </div>
+              <div className="returns-metric highlight">
+                <span className="returns-metric-value">
+                  {displayedProperty ? (() => {
+                    const value = calculateDividendStats().totalDividends + (calculateValuationMetrics().appreciationPerShare || 0);
+                    return value < 0 ? `-$${Math.abs(value).toFixed(2)}` : `$${value.toFixed(2)}`;
+                  })() : "—"}
+                </span>
+                <span className="returns-metric-label">
+                  Total Gross Return Per Share
+                </span>
               </div>
-
-              <div className="returns-section appreciation">
-                <h4>Appreciation</h4>
-                {valuations.filter(v => v.propertyName === displayedProperty).length === 0 && (
-                  <div className="returns-metric">
-                    <span className="returns-metric-value">
-                      {propertyData.find(p => p.propertyName === displayedProperty)?.firstSharePriceDate.toLocaleDateString('en-US', { 
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                    <span className="returns-metric-label">
-                      First Arrived Valuation Date
-                    </span>
-                  </div>
-                )}
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0
-                      ? "N/A"
-                      : (() => {
-                          const value = calculateValuationMetrics().currentValuation;
-                          return value !== null && value < 0 
-                            ? `-$${Math.abs(value).toFixed(2)}`
-                            : `$${value?.toFixed(2)}`;
-                        })()}
-                  </span>
-                  <span className="returns-metric-label">
-                    Current Arrived Valuation
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0 
-                      ? "N/A"
-                      : (() => {
-                          const value = calculateValuationMetrics().appreciationPerShare;
-                          return value !== null && value < 0
-                            ? `-$${Math.abs(value).toFixed(2)}`
-                            : `$${value?.toFixed(2)}`;
-                        })()}
-                  </span>
-                  <span className="returns-metric-label">
-                    Appreciation Per Share
-                  </span>
-                </div>
-                <div className="returns-metric">
-                  <span className="returns-metric-value">
-                    {valuations.filter(v => v.propertyName === displayedProperty).length === 0
-                      ? "N/A"
-                      : `${calculateValuationMetrics().appreciationPercent?.toFixed(1)}%`}
-                  </span>
-                  <span className="returns-metric-label">
-                    Appreciation Per Share %
-                  </span>
-                </div>
+              <div className="returns-metric highlight">
+                <span className="returns-metric-value">
+                  {displayedProperty ? `${calculateAverageAnnualReturn()?.toFixed(1)}%` : "—"}
+                </span>
+                <span className="returns-metric-label">
+                  Average Annual Return
+                </span>
+              </div>
+              <div className="returns-metric highlight">
+                <span className="returns-metric-value">
+                  {displayedProperty ? (() => {
+                    const irr = calculatePropertyIRR();
+                    return irr ? `${irr.toFixed(1)}%` : 'N/A';
+                  })() : "—"}
+                </span>
+                <span className="returns-metric-label">
+                  Internal Rate of Return (IRR)
+                  <InfoIcon 
+                    tooltip="IRR represents the annualized return rate that makes the present value of all cash flows equal to zero. It considers the $10 initial investment, all dividend payments, and the final property valuation as of March 31, 2025."
+                  />
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Success Rate Display */}
+          <div className="returns-section dividends">
+            <h4>Dividends</h4>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? calculateDividendStats().paidCount : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Dividends Paid {displayedProperty ? `(${calculateDividendStats().successRate?.toFixed(1)}% of possible dividends)` : ""}
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? `${calculateAverageYield()?.toFixed(1)}%` : "—"}
+              </span>
+              <span className="returns-metric-label">
+                All-Time Average Dividend Yield (Based on $10/share cost)
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? `${calculateDividendStats().ttmYield.toFixed(1)}%` : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Trailing 12-Month Dividend Yield (Based on $10/share cost)
+                {displayedProperty && acquisitionDates.find(a => a.propertyName === displayedProperty)?.escrowClose &&
+                 (new Date().getTime() - acquisitionDates.find(a => a.propertyName === displayedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
+                  ? ' (Annualized)' 
+                  : ''}
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? `${calculateCurrentYield()?.toFixed(1)}%` : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Current Yield (TTM Dividends / Current Valuation)
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? `$${calculateDividendStats().totalDividends.toFixed(2)}` : "—"}
+              </span>
+              <span className="returns-metric-label">
+                All-Time Dividends Per Share
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? `${calculateDividendStats().grossYield.toFixed(1)}%` : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Gross Dividend Yield (Total Dividends / $10)
+              </span>
+            </div>
+          </div>
+
+          <div className="returns-section appreciation">
+            <h4>Appreciation</h4>
+            {displayedProperty && valuations.filter(v => v.propertyName === displayedProperty).length === 0 && (
+              <div className="returns-metric">
+                <span className="returns-metric-value">
+                  {propertyData.find(p => p.propertyName === displayedProperty)?.firstSharePriceDate.toLocaleDateString('en-US', { 
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+                <span className="returns-metric-label">
+                  First Arrived Valuation Date
+                </span>
+              </div>
+            )}
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? (
+                  valuations.filter(v => v.propertyName === displayedProperty).length === 0
+                    ? "N/A"
+                    : (() => {
+                        const value = calculateValuationMetrics().currentValuation;
+                        return value !== null && value < 0 
+                          ? `-$${Math.abs(value).toFixed(2)}`
+                          : `$${value?.toFixed(2)}`;
+                      })()
+                ) : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Current Arrived Valuation
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? (
+                  valuations.filter(v => v.propertyName === displayedProperty).length === 0 
+                    ? "N/A"
+                    : (() => {
+                        const value = calculateValuationMetrics().appreciationPerShare;
+                        return value !== null && value < 0
+                          ? `-$${Math.abs(value).toFixed(2)}`
+                          : `$${value?.toFixed(2)}`;
+                      })()
+                ) : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Appreciation Per Share
+              </span>
+            </div>
+            <div className="returns-metric">
+              <span className="returns-metric-value">
+                {displayedProperty ? (
+                  valuations.filter(v => v.propertyName === displayedProperty).length === 0
+                    ? "N/A"
+                    : `${calculateValuationMetrics().appreciationPercent?.toFixed(1)}%`
+                ) : "—"}
+              </span>
+              <span className="returns-metric-label">
+                Appreciation Per Share %
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Success Rate Display - only show when property is selected */}
+      {displayedProperty && (
         <div className="success-rate">
           <p>
             The <span className="property-name">{displayedProperty}</span> has paid{' '}
-              <span className="rate-value">{calculateDividendStats().successRate}%</span>{' '}
+            <span className="rate-value">{calculateDividendStats().successRate}%</span>{' '}
             of possible dividends
           </p>
         </div>
+      )}
 
-      {/* Table grid chart */}
+      {/* Table grid chart - show empty structure when no property selected */}
       <table>
         <thead>
           <tr>
@@ -913,59 +933,43 @@ function App() {
           {years.map(year => (
             <tr key={year}>
               <td className="year-cell">{year}</td>
-              {months.map((m, idx) => {
-                if (!displayedProperty) {
-                  return <td key={m}></td>;
-                }
-                const paid = wasPaidOrBlank(year, idx);
-                const dividendAmount = paid ? getDividendAmount(year, idx) : 0;
-                return (
-                  <td 
-                    key={m}
-                    {...(paid !== null ? { title: `$${dividendAmount.toFixed(2)}` } : {})}
-                  >
-                    {paid === null
-                      ? ''
-                      : paid
-                        ? '✅'
-                        : '❌'}
-                  </td>
-                );
-              })}
+              {months.map((m, idx) => (
+                <td key={m}></td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Line chart */}
+      {/* Charts - always show */}
       <div className="chart-container">
-            <div className="chart-header">
-        <h3>Monthly Dividend Payment History</h3>
-              <div className="chart-controls">
-                <div className="chart-toggle">
-                  <div 
-                    className={`toggle-switch ${showAnnualizedYield ? 'checked' : ''}`}
-                    onClick={() => setShowAnnualizedYield(!showAnnualizedYield)}
-                  >
-                    <div className="toggle-slider"></div>
-                    <div className="toggle-icons">
-                      <span>$</span>
-                      <span>%</span>
-                    </div>
-                  </div>
+        <div className="chart-header">
+          <h3>Dividend Payment History</h3>
+          <div className="chart-controls">
+            <div className="chart-toggle">
+              <div 
+                className={`toggle-switch ${showAnnualizedYield ? 'checked' : ''}`}
+                onClick={() => setShowAnnualizedYield(!showAnnualizedYield)}
+              >
+                <div className="toggle-slider"></div>
+                <div className="toggle-icons">
+                  <span>$</span>
+                  <span>%</span>
                 </div>
-                {showAnnualizedYield && (
-                  <label className="average-yield-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showAverageYield}
-                      onChange={(e) => setShowAverageYield(e.target.checked)}
-                    />
-                    <span>Show All-Time Average</span>
-                  </label>
-                )}
               </div>
             </div>
+            {showAnnualizedYield && (
+              <label className="average-yield-toggle">
+                <input
+                  type="checkbox"
+                  checked={showAverageYield}
+                  onChange={(e) => setShowAverageYield(e.target.checked)}
+                />
+                <span>Show All-Time Average</span>
+              </label>
+            )}
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -978,7 +982,7 @@ function App() {
             />
             <YAxis 
               label={{ 
-                    value: showAnnualizedYield ? 'Annualized Dividend Yield (%)' : 'Monthly Dividend per Share ($)', 
+                value: showAnnualizedYield ? 'Annualized Dividend Yield (%)' : 'Monthly Dividend per Share ($)', 
                 angle: -90, 
                 position: 'insideLeft',
                 offset: -40,
@@ -987,15 +991,15 @@ function App() {
                   fontSize: '0.9rem'
                 }
               }}
-                  tickFormatter={(value) => showAnnualizedYield ? `${value}%` : `$${value}`}
+              tickFormatter={(value) => showAnnualizedYield ? `${value}%` : `$${value}`}
             />
             <Tooltip 
-                  formatter={(value, name) => {
-                    if (name === 'averageYield') {
-                      return value ? [`${value}%`, 'All-Time Average'] : ['-', 'All-Time Average'];
-                    }
-                    return value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Monthly Dividend'];
-                  }}
+              formatter={(value, name) => {
+                if (name === 'averageYield') {
+                  return value ? [`${value}%`, 'All-Time Average'] : ['-', 'All-Time Average'];
+                }
+                return value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Dividend'];
+              }}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 
                 backgroundColor: 'white',
@@ -1011,17 +1015,17 @@ function App() {
               dot={{ fill: 'var(--arrived-accent)' }}
               activeDot={{ r: 6 }}
             />
-                {showAverageYield && showAnnualizedYield && (
-                  <Line 
-                    type="monotone" 
-                    dataKey="averageYield" 
-                    stroke="#FF6B6B"
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="5 5"
-                    isAnimationActive={false}
-                  />
-                )}
+            {showAverageYield && showAnnualizedYield && (
+              <Line 
+                type="monotone" 
+                dataKey="averageYield" 
+                stroke="#FF6B6B"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 5"
+                isAnimationActive={false}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
         <p className="chart-note">
@@ -1031,68 +1035,61 @@ function App() {
         <p className="chart-data-note">
           Data for the line chart begins with the first dividend payment.
         </p>
-            <p className="chart-data-note">
-              Annualized Yield is calculated by taking that month's dividend and extrapolating for a full year. It's based off a $10 per share purchase price. 
-            </p>
-          </div>
+        <p className="chart-data-note">
+          Annualized Yield is calculated by taking that month's dividend and extrapolating for a full year. It's based off a $10 per share purchase price. 
+        </p>
+      </div>
 
-          {displayedProperty && (
-            <>
-              {/* Valuation Chart */}
-              <div className="chart-container">
-                <h3>Arrived Valuation History</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={getValuationChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      interval={2}
-                    />
-                    <YAxis 
-                      label={{ 
-                        value: 'Arrived Valuation ($)', 
-                        angle: -90, 
-                        position: 'insideLeft',
-                        offset: -40,
-                        style: { 
-                          textAnchor: 'middle',
-                          fontSize: '0.9rem'
-                        }
-                      }}
-                      tickFormatter={(value) => `$${value}`}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`$${value}`, 'Arrived Valuation']}
-                      labelStyle={{ color: 'var(--arrived-primary)' }}
-                      contentStyle={{ 
-                        backgroundColor: 'white',
-                        border: '1px solid var(--arrived-border)',
-                        borderRadius: '4px'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="var(--arrived-accent)" 
-                      strokeWidth={2}
-                      dot={{ fill: 'var(--arrived-accent)' }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                <p className="chart-note">
-                  Share value starts at $10 (IPO price) and updates based on Arrived's periodic valuations.
-                </p>
-              </div>
-            </>
-          )}
-        </>
-      )}
+      <div className="chart-container">
+        <h3>Arrived Valuation History</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={getValuationChartData()} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="date" 
+              angle={-45}
+              textAnchor="end"
+              height={60}
+              interval={2}
+            />
+            <YAxis 
+              label={{ 
+                value: 'Arrived Valuation ($)', 
+                angle: -90, 
+                position: 'insideLeft',
+                offset: -40,
+                style: { 
+                  textAnchor: 'middle',
+                  fontSize: '0.9rem'
+                }
+              }}
+              tickFormatter={(value) => `$${value}`}
+            />
+            <Tooltip 
+              formatter={(value) => [`$${value}`, 'Arrived Valuation']}
+              labelStyle={{ color: 'var(--arrived-primary)' }}
+              contentStyle={{ 
+                backgroundColor: 'white',
+                border: '1px solid var(--arrived-border)',
+                borderRadius: '4px'
+              }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="var(--arrived-accent)" 
+              strokeWidth={2}
+              dot={{ fill: 'var(--arrived-accent)' }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+        <p className="chart-note">
+          Share value starts at $10 (IPO price) and updates based on Arrived's periodic valuations.
+        </p>
+      </div>
 
-      {/* Disclaimer Section */}
+      {/* Disclaimer Section - always show */}
       <div className="disclaimer-section">
         <h4>Disclaimer</h4>
         <p>
