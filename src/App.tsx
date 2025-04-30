@@ -352,20 +352,21 @@ function App() {
       const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
       
       if (acquisitionDate) {
-        const today = new Date();
-        const twelveMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 11, 1);
-        const daysSinceAcquisition = Math.floor((today.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
+        const endDate = new Date(2025, 2, 31); // March 31, 2025
+        const twelveMonthsAgo = new Date(2025, 2 - 11, 1); // 12 months before March 2025
+        const daysSinceAcquisition = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
 
         if (daysSinceAcquisition >= 365) {
           // Property is older than 12 months - use actual TTM
           const ttmDividends = propertyDividends
-            .filter(d => d.dividendDate >= twelveMonthsAgo)
+            .filter(d => d.dividendDate >= twelveMonthsAgo && d.dividendDate <= endDate)
             .reduce((sum, div) => sum + div.dividendPerShare, 0);
           const ttmYieldValue = (ttmDividends / 10 * 100);
           ttmYield = Number(ttmYieldValue.toFixed(1));
         } else {
           // Property is newer than 12 months - annualize the returns
           const totalDividendsSinceAcquisition = propertyDividends
+            .filter(d => d.dividendDate <= endDate)
             .reduce((sum, div) => sum + div.dividendPerShare, 0);
           const annualizedYieldValue = ((totalDividendsSinceAcquisition / daysSinceAcquisition) * 365 / 10 * 100);
           ttmYield = Number(annualizedYieldValue.toFixed(1));
@@ -521,6 +522,23 @@ function App() {
     return (ttmDividends / currentValuation) * 100;
   };
 
+  // Calculate Average Annual Return
+  const calculateAverageAnnualReturn = () => {
+    if (!selectedProperty) return null;
+
+    const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
+    if (!acquisitionDate) return null;
+
+    const endDate = new Date(2025, 2, 31); // March 31, 2025
+    const totalDays = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
+    const totalGrossReturn = calculateValuationMetrics().totalGrossReturn;
+    
+    if (totalGrossReturn === null) return null;
+
+    const annualizedReturn = (totalGrossReturn / totalDays) * 365;
+    return Number(annualizedReturn.toFixed(1));
+  };
+
   return (
     <div className="App">
       <h2>Arrived Property Dividend History</h2>
@@ -579,6 +597,17 @@ function App() {
                       {property.ipoDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </span>
                   </div>
+                  <div className="property-detail">
+                    <span className="property-label">Time Since IPO:</span>
+                    <span className="property-value">
+                      {(() => {
+                        const endDate = new Date(2025, 2, 31); // March 31, 2025
+                        const days = Math.floor((endDate.getTime() - property.ipoDate.getTime()) / (1000 * 60 * 60 * 24));
+                        const years = (days / 365).toFixed(1);
+                        return `${years} years`;
+                      })()}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -600,10 +629,21 @@ function App() {
                   </div>
                   <div className="returns-metric highlight">
                     <span className="returns-metric-value">
-                      ${(calculateDividendStats().totalDividends + (calculateValuationMetrics().appreciationPerShare || 0)).toFixed(2)}
+                      {(() => {
+                        const value = calculateDividendStats().totalDividends + (calculateValuationMetrics().appreciationPerShare || 0);
+                        return value < 0 ? `-$${Math.abs(value).toFixed(2)}` : `$${value.toFixed(2)}`;
+                      })()}
                     </span>
                     <span className="returns-metric-label">
                       Total Gross Return Per Share
+                    </span>
+                  </div>
+                  <div className="returns-metric highlight">
+                    <span className="returns-metric-value">
+                      {calculateAverageAnnualReturn()?.toFixed(1)}%
+                    </span>
+                    <span className="returns-metric-label">
+                      Average Annual Return
                     </span>
                   </div>
                 </div>
@@ -684,7 +724,12 @@ function App() {
                   <span className="returns-metric-value">
                     {valuations.filter(v => v.propertyName === displayedProperty).length === 0
                       ? "N/A"
-                      : `$${calculateValuationMetrics().currentValuation?.toFixed(2)}`}
+                      : (() => {
+                          const value = calculateValuationMetrics().currentValuation;
+                          return value !== null && value < 0 
+                            ? `-$${Math.abs(value).toFixed(2)}`
+                            : `$${value?.toFixed(2)}`;
+                        })()}
                   </span>
                   <span className="returns-metric-label">
                     Current Arrived Valuation
@@ -694,7 +739,12 @@ function App() {
                   <span className="returns-metric-value">
                     {valuations.filter(v => v.propertyName === displayedProperty).length === 0 
                       ? "N/A"
-                      : `$${calculateValuationMetrics().appreciationPerShare?.toFixed(2)}`}
+                      : (() => {
+                          const value = calculateValuationMetrics().appreciationPerShare;
+                          return value !== null && value < 0
+                            ? `-$${Math.abs(value).toFixed(2)}`
+                            : `$${value?.toFixed(2)}`;
+                        })()}
                   </span>
                   <span className="returns-metric-label">
                     Appreciation Per Share
@@ -915,6 +965,17 @@ function App() {
           )}
         </>
       )}
+
+      {/* Disclaimer Section */}
+      <div className="disclaimer-section">
+        <h4>Disclaimer</h4>
+        <p>
+          This dashboard is for informational purposes only. While we strive for accuracy, the data presented may not be 100% accurate 
+          and should not be relied upon for investment decisions. All return calculations use the Initial Escrow Close date as the 
+          investment starting point, which may differ from your actual investment date. Please verify all information independently 
+          and consult with financial advisors for investment decisions.
+        </p>
+      </div>
     </div>
   );
 }

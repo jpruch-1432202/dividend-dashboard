@@ -802,3 +802,26 @@ td[title]:hover::after {
     gap: 1rem;
   }
 }
+
+.disclaimer-section {
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  max-width: 1200px;
+}
+
+.disclaimer-section h4 {
+  color: #6c757d;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.disclaimer-section p {
+  color: #6c757d;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
