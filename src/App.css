@@ -825,3 +825,76 @@ td[title]:hover::after {
   line-height: 1.5;
   margin: 0;
 }
+
+.info-icon-container {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  cursor: help;
+  position: relative;
+  color: var(--arrived-secondary);
+}
+
+.info-icon {
+  width: 14px;
+  height: 14px;
+  transition: color 0.2s ease;
+}
+
+.info-icon-container:hover {
+  color: var(--arrived-accent);
+}
+
+.custom-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  background: white;
+  color: var(--arrived-primary);
+  font-size: 0.9rem;
+  border-radius: 8px;
+  white-space: normal;
+  z-index: 1000;
+  width: max-content;
+  max-width: 300px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--arrived-border);
+  line-height: 1.5;
+  text-align: left;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-right: 1px solid var(--arrived-border);
+  border-bottom: 1px solid var(--arrived-border);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-tooltip {
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    max-width: 250px;
+  }
+}

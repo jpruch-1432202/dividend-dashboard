@@ -41,6 +41,40 @@ type ValuationChartPoint = {
   value: number | null;
 };
 
+const InfoIcon: React.FC<{ tooltip: string }> = ({ tooltip }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div 
+      className="info-icon-container"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <svg
+        className="info-icon"
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M8 12V7M8 5V4"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+      {showTooltip && (
+        <div className="custom-tooltip">
+          {tooltip}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [dividends, setDividends] = useState<DividendRecord[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
@@ -539,6 +573,84 @@ function App() {
     return Number(annualizedReturn.toFixed(1));
   };
 
+  // Helper function to calculate NPV given a rate
+  function calculateNPV(cashFlows: { amount: number; date: Date }[], rate: number): number {
+    return cashFlows.reduce((npv, cf) => {
+      const yearFraction = (cf.date.getTime() - cashFlows[0].date.getTime()) / (365 * 24 * 60 * 60 * 1000);
+      return npv + cf.amount / Math.pow(1 + rate, yearFraction);
+    }, 0);
+  }
+
+  // Calculate IRR using Newton-Raphson method
+  function calculateIRR(cashFlows: { amount: number; date: Date }[]): number | null {
+    if (cashFlows.length < 2) return null;
+
+    let rate = 0.1; // Initial guess
+    const maxIterations = 100;
+    const tolerance = 0.0000001;
+
+    for (let i = 0; i < maxIterations; i++) {
+      const npv = calculateNPV(cashFlows, rate);
+      if (Math.abs(npv) < tolerance) {
+        return rate;
+      }
+
+      // Calculate derivative of NPV with respect to rate
+      const derivative = cashFlows.reduce((sum, cf) => {
+        const yearFraction = (cf.date.getTime() - cashFlows[0].date.getTime()) / (365 * 24 * 60 * 60 * 1000);
+        return sum - yearFraction * cf.amount / Math.pow(1 + rate, yearFraction + 1);
+      }, 0);
+
+      // Newton-Raphson step
+      const newRate = rate - npv / derivative;
+      
+      // Check for convergence
+      if (Math.abs(newRate - rate) < tolerance) {
+        return newRate;
+      }
+
+      rate = newRate;
+    }
+
+    return null; // Failed to converge
+  }
+
+  // Calculate IRR for a property
+  const calculatePropertyIRR = () => {
+    if (!selectedProperty) return null;
+
+    const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty);
+    const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
+    const currentValuation = calculateValuationMetrics().currentValuation;
+    
+    if (!acquisitionDate || !currentValuation) return null;
+
+    // Create array of cash flows
+    const cashFlows: { amount: number; date: Date }[] = [
+      // Initial investment
+      { amount: -10, date: acquisitionDate }
+    ];
+
+    // Add all dividends
+    propertyDividends.forEach(div => {
+      if (div.dividendDate <= new Date(2025, 2, 31)) { // Only include dividends up to March 31, 2025
+        cashFlows.push({
+          amount: div.dividendPerShare,
+          date: div.dividendDate
+        });
+      }
+    });
+
+    // Add final valuation
+    cashFlows.push({
+      amount: currentValuation,
+      date: new Date(2025, 2, 31) // March 31, 2025
+    });
+
+    const irr = calculateIRR(cashFlows);
+    return irr ? (irr * 100) : null; // Convert to percentage
+  };
+
   return (
     <div className="App">
       <h2>Arrived Property Dividend History</h2>
@@ -644,6 +756,20 @@ function App() {
                     </span>
                     <span className="returns-metric-label">
                       Average Annual Return
+                    </span>
+                  </div>
+                  <div className="returns-metric highlight">
+                    <span className="returns-metric-value">
+                      {(() => {
+                        const irr = calculatePropertyIRR();
+                        return irr ? `${irr.toFixed(1)}%` : 'N/A';
+                      })()}
+                    </span>
+                    <span className="returns-metric-label">
+                      Internal Rate of Return (IRR)
+                      <InfoIcon 
+                        tooltip="IRR represents the annualized return rate that makes the present value of all cash flows equal to zero. It considers the $10 initial investment, all dividend payments, and the final property valuation as of March 31, 2025."
+                      />
                     </span>
                   </div>
                 </div>
