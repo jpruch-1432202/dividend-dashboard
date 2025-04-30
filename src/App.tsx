@@ -809,6 +809,9 @@ function App() {
             </div>
           )}
         </div>
+        <div className="data-update-date">
+          Data on this page is up to date as of 3/31/25
+        </div>
       </div>
 
       {/* Completed Investment Alert */}
@@ -1294,7 +1297,7 @@ function App() {
         <p>
           This dashboard is for informational purposes only. While we strive for accuracy, the data presented may not be 100% accurate 
           and should not be relied upon for investment decisions. All return calculations use the Initial Escrow Close date as the 
-          investment starting point, which may differ from your actual investment date. Please verify all information independently 
+          investment starting point, which may differ from your actual investment date. All data shown is as of March 31, 2025. Please verify all information independently 
           and consult with financial advisors for investment decisions.
         </p>
       </div>
