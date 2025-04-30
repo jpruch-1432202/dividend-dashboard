@@ -439,38 +439,81 @@ td[title]:hover::after {
 
 .returns-metric {
   display: flex;
+  flex-direction: row;
   align-items: baseline;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .returns-metric-value {
   font-size: 1.8rem;
   font-weight: 600;
   color: var(--arrived-accent);
-  margin-right: 0.5rem;
+  line-height: 1.2;
+  min-width: 100px; /* Ensures consistent spacing for label alignment */
+  text-align: right;
+  padding-right: 12px;
 }
 
 .returns-metric-label {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--arrived-secondary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* Special styling for the total returns section */
+.total-returns {
+  padding: 1.5rem;
+}
+
+.total-returns .returns-metrics-container {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 0.5rem;
+}
+
+.total-returns .returns-metric {
+  margin-bottom: 0;
+  justify-content: center;
+}
+
+.total-returns .returns-metric-value {
+  font-size: 2.2rem;
+  min-width: auto;
+  text-align: center;
+}
+
+.total-returns .returns-metric-label {
+  font-size: 1rem;
+  text-align: left;
 }
 
 @media (max-width: 768px) {
-  .returns-summary {
-    padding: 1rem;
-    margin-top: 1.5rem;
-  }
-
-  .returns-summary h3 {
-    font-size: 1.25rem;
+  .returns-metric {
     margin-bottom: 1rem;
   }
 
   .returns-metric-value {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    min-width: 90px;
+    padding-right: 8px;
   }
 
   .returns-metric-label {
+    font-size: 0.85rem;
+  }
+
+  .total-returns .returns-metrics-container {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .total-returns .returns-metric-value {
+    font-size: 2rem;
+  }
+
+  .total-returns .returns-metric-label {
     font-size: 0.9rem;
   }
 }

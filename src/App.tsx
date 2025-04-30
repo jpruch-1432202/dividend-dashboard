@@ -20,6 +20,8 @@ type PropertyData = {
   fullAddress: string;
   market: string;
   ipoDate: Date;
+  firstSharePriceDate: Date;
+  propertyType: string;
 };
 
 type ValuationRecord = {
@@ -42,6 +44,7 @@ type ValuationChartPoint = {
 function App() {
   const [dividends, setDividends] = useState<DividendRecord[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [displayedProperty, setDisplayedProperty] = useState<string>("");
   const [acquisitionDates, setAcquisitionDates] = useState<AcquisitionDate[]>([]);
   const [valuations, setValuations] = useState<ValuationRecord[]>([]);
   const [propertyData, setPropertyData] = useState<PropertyData[]>([]);
@@ -115,15 +118,33 @@ function App() {
       download: true,
       header: true,
       complete: (results: any) => {
+        console.log("Property data columns:", Object.keys(results.data[0]));
         const data = results.data as any[];
+        console.log("Property data after filtering:", data.filter((row) => 
+          row["Property Name"] && 
+          row["Full Address"] && 
+          row["Market"] && 
+          row["IPO Date"] && 
+          row["First Share Price Date"] &&
+          row["Rental Type"]
+        ));
         setPropertyData(
           data
-            .filter((row) => row["Property Name"] && row["Full Address"] && row["Market"] && row["IPO Date"])
+            .filter((row) => 
+              row["Property Name"] && 
+              row["Full Address"] && 
+              row["Market"] && 
+              row["IPO Date"] && 
+              row["First Share Price Date"] &&
+              row["Rental Type"]
+            )
             .map((row) => ({
               propertyName: row["Property Name"],
               fullAddress: row["Full Address"],
               market: row["Market"],
-              ipoDate: new Date(row["IPO Date"])
+              ipoDate: new Date(row["IPO Date"]),
+              firstSharePriceDate: new Date(row["First Share Price Date"]),
+              propertyType: row["Rental Type"] === "Long Term" ? "Single Family Residential" : "Vacation Rental"
             }))
         );
       },
@@ -138,6 +159,7 @@ function App() {
 
   const handlePropertySelect = (property: string) => {
     setSelectedProperty(property);
+    setDisplayedProperty(property);
     setSearchTerm(property);
     setIsDropdownOpen(false);
   };
@@ -510,9 +532,6 @@ function App() {
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setIsDropdownOpen(true);
-              if (e.target.value === "") {
-                setSelectedProperty("");
-              }
             }}
             onFocus={() => setIsDropdownOpen(true)}
             placeholder="Search or select a property"
@@ -533,11 +552,11 @@ function App() {
         </div>
       </div>
 
-      {selectedProperty && (
+      {displayedProperty && (
         <>
           <div className="property-summary-section">
             <h3>Property Summary</h3>
-            {propertyData.filter(p => p.propertyName === selectedProperty).map(property => (
+            {propertyData.filter(p => p.propertyName === displayedProperty).map(property => (
               <div key={property.propertyName} className="property-summary-grid">
                 <div className="property-summary-left">
                   <div className="property-detail">
@@ -547,6 +566,10 @@ function App() {
                   <div className="property-detail">
                     <span className="property-label">Market:</span>
                     <span className="property-value">{property.market}</span>
+                  </div>
+                  <div className="property-detail">
+                    <span className="property-label">Property Type:</span>
+                    <span className="property-value">{property.propertyType}</span>
                   </div>
                 </div>
                 <div className="property-summary-right">
@@ -616,8 +639,8 @@ function App() {
                   </span>
                   <span className="returns-metric-label">
                     Trailing 12-Month Dividend Yield (Based on $10/share cost){' '}
-                    {acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose &&
-                     (new Date().getTime() - acquisitionDates.find(a => a.propertyName === selectedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
+                    {acquisitionDates.find(a => a.propertyName === displayedProperty)?.escrowClose &&
+                     (new Date().getTime() - acquisitionDates.find(a => a.propertyName === displayedProperty)!.escrowClose.getTime()) / (1000 * 60 * 60 * 24) < 365 
                       ? '(Annualized)' 
                       : ''}
                   </span>
@@ -650,6 +673,19 @@ function App() {
 
               <div className="returns-section appreciation">
                 <h4>Appreciation</h4>
+                {valuations.filter(v => v.propertyName === displayedProperty).length === 0 && (
+                  <div className="returns-metric">
+                    <span className="returns-metric-value">
+                      {propertyData.find(p => p.propertyName === displayedProperty)?.firstSharePriceDate.toLocaleDateString('en-US', { 
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                    <span className="returns-metric-label">
+                      First Arrived Valuation Date
+                    </span>
+                  </div>
+                )}
                 <div className="returns-metric">
                   <span className="returns-metric-value">
                     ${calculateValuationMetrics().appreciationPerShare?.toFixed(2)}
@@ -673,7 +709,7 @@ function App() {
           {/* Success Rate Display */}
         <div className="success-rate">
           <p>
-            The <span className="property-name">{selectedProperty}</span> has paid{' '}
+            The <span className="property-name">{displayedProperty}</span> has paid{' '}
               <span className="rate-value">{calculateDividendStats().successRate}%</span>{' '}
             of possible dividends
           </p>
@@ -694,7 +730,7 @@ function App() {
             <tr key={year}>
               <td className="year-cell">{year}</td>
               {months.map((m, idx) => {
-                if (!selectedProperty) {
+                if (!displayedProperty) {
                   return <td key={m}></td>;
                 }
                 const paid = wasPaidOrBlank(year, idx);
@@ -816,7 +852,7 @@ function App() {
             </p>
           </div>
 
-          {selectedProperty && (
+          {displayedProperty && (
             <>
               {/* Valuation Chart */}
               <div className="chart-container">
@@ -867,11 +903,6 @@ function App() {
                   Share value starts at $10 (IPO price) and updates based on Arrived's periodic valuations.
                 </p>
               </div>
-
-              <div className="returns-summary">
-                <h3>Secondary Market Modeling</h3>
-                <p className="placeholder-text">Future metrics for secondary market analysis will appear here.</p>
-      </div>
             </>
           )}
         </>
