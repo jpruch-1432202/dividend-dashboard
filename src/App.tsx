@@ -3,6 +3,8 @@ import Papa from "papaparse";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./App.css";
 
+const { FaBed, FaBath, FaRulerCombined, FaCalendarAlt } = require('react-icons/fa');
+
 // Define the type for your dividend data
 type DividendRecord = {
   propertyName: string;
@@ -22,6 +24,12 @@ type PropertyData = {
   ipoDate: Date;
   firstSharePriceDate: Date;
   propertyType: string;
+  termLoanToCost: number;
+  bedrooms: number;
+  totalBathrooms: number;
+  squareFootage: number;
+  yearBuilt: number;
+  shareCount: number;
 };
 
 type ValuationRecord = {
@@ -180,14 +188,10 @@ function App() {
       complete: (results: any) => {
         console.log("Property data columns:", Object.keys(results.data[0]));
         const data = results.data as any[];
-        console.log("Property data after filtering:", data.filter((row) => 
-          row["Property Name"] && 
-          row["Full Address"] && 
-          row["Market"] && 
-          row["IPO Date"] && 
-          row["First Share Price Date"] &&
-          row["Rental Type"]
-        ));
+        console.log("Raw Share Count data:", data.map(row => ({
+          property: row["Property Name"],
+          shareCount: row["Share Count"]
+        })));
         setPropertyData(
           data
             .filter((row) => 
@@ -196,7 +200,13 @@ function App() {
               row["Market"] && 
               row["IPO Date"] && 
               row["First Share Price Date"] &&
-              row["Rental Type"]
+              row["Rental Type"] &&
+              row["Term Loan to Cost"] &&
+              row["Bedrooms"] &&
+              row["Total Bathrooms"] &&
+              row["SF"] &&
+              row["Year Built"] &&
+              row["Share Count"]
             )
             .map((row) => ({
               propertyName: row["Property Name"],
@@ -204,7 +214,13 @@ function App() {
               market: row["Market"],
               ipoDate: new Date(row["IPO Date"]),
               firstSharePriceDate: new Date(row["First Share Price Date"]),
-              propertyType: row["Rental Type"] === "Long Term" ? "Single Family Residential" : "Vacation Rental"
+              propertyType: row["Rental Type"] === "Long Term" ? "Single Family Residential" : "Vacation Rental",
+              termLoanToCost: parseFloat(row["Term Loan to Cost"]),
+              bedrooms: parseInt(row["Bedrooms"]),
+              totalBathrooms: parseFloat(row["Total Bathrooms"]),
+              squareFootage: parseInt(row["SF"]),
+              yearBuilt: parseInt(row["Year Built"]),
+              shareCount: Number(row["Share Count"].replace(/,/g, ''))
             }))
         );
       },
@@ -784,7 +800,7 @@ function App() {
         </div>
       )}
 
-      {/* Always show the structure, even without a selected property */}
+      {/* Property Summary Section */}
       <div className="property-summary-section">
         <h3>Property Summary</h3>
         <div className="property-summary-grid">
@@ -794,12 +810,55 @@ function App() {
               <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.fullAddress : "—"}</span>
             </div>
             <div className="property-detail">
+              <span className="property-label">Property Information:</span>
+              <div className="property-metrics">
+                <div className="property-metric">
+                  <FaBed className="property-metric-icon" />
+                  <div className="property-metric-value">
+                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.bedrooms : "—"}
+                  </div>
+                </div>
+                <div className="property-metric">
+                  <FaBath className="property-metric-icon" />
+                  <div className="property-metric-value">
+                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.totalBathrooms : "—"}
+                  </div>
+                </div>
+                <div className="property-metric">
+                  <FaRulerCombined className="property-metric-icon" />
+                  <div className="property-metric-value">
+                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.squareFootage.toLocaleString() : "—"}
+                    <span className="property-metric-unit">sqft</span>
+                  </div>
+                </div>
+                <div className="property-metric">
+                  <FaCalendarAlt className="property-metric-icon" />
+                  <div className="property-metric-value">
+                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.yearBuilt : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="property-detail">
               <span className="property-label">Market:</span>
               <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.market : "—"}</span>
             </div>
             <div className="property-detail">
               <span className="property-label">Property Type:</span>
               <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.propertyType : "—"}</span>
+            </div>
+            <div className="property-detail">
+              <span className="property-label">
+                Property Leverage
+                <InfoIcon 
+                  tooltip="This is the loan to value ratio based on the original purchase price"
+                />
+              </span>
+              <span className="property-value">
+                {displayedProperty ? 
+                  `${Math.round(propertyData.find(p => p.propertyName === displayedProperty)?.termLoanToCost || 0)}%` 
+                  : "—"}
+              </span>
             </div>
           </div>
           <div className="property-summary-right">
@@ -819,6 +878,12 @@ function App() {
                   const days = Math.floor((endDate.getTime() - property.ipoDate.getTime()) / (1000 * 60 * 60 * 24));
                   return `${(days / 365).toFixed(1)} years`;
                 })() : "—"}
+              </span>
+            </div>
+            <div className="property-detail">
+              <span className="property-label">Number of Shares:</span>
+              <span className="property-value">
+                {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.shareCount.toLocaleString() : "—"}
               </span>
             </div>
           </div>
@@ -1101,12 +1166,12 @@ function App() {
                   return value ? [
                     showAnnualizedYield ? `${value}%` : `$${Number(value).toFixed(3)}`,
                     `All-Time Average ${showAnnualizedYield ? 'Yield' : 'Dividend'}`
-                  ] : ['-', `All-Time Average ${showAnnualizedYield ? 'Yield' : 'Dividend'}`];
+                  ] : [`${showAnnualizedYield ? '0%' : '$0.000'}`, `All-Time Average ${showAnnualizedYield ? 'Yield' : 'Dividend'}`];
                 }
                 return value ? [
                   showAnnualizedYield ? `${value}%` : `$${value}`, 
                   showAnnualizedYield ? 'Annualized Yield' : 'Dividend'
-                ] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Dividend'];
+                ] : [`${showAnnualizedYield ? '0%' : '$0.000'}`, showAnnualizedYield ? 'Annualized Yield' : 'Dividend'];
               }}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 

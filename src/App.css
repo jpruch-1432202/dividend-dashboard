@@ -931,3 +931,57 @@ td[title]:hover::after {
     font-size: 0.9rem;
   }
 }
+
+.property-metrics {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background-color: var(--arrived-hover);
+  border-radius: 8px;
+}
+
+.property-metric {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.property-metric-icon {
+  font-size: 1.25rem;
+  color: var(--arrived-accent);
+}
+
+.property-metric-value {
+  font-weight: 600;
+  color: var(--arrived-primary);
+  font-size: 1.1rem;
+}
+
+.property-metric-unit {
+  font-size: 0.75em;
+  color: var(--arrived-secondary);
+  margin-left: 2px;
+  font-weight: normal;
+}
+
+@media (max-width: 768px) {
+  .property-metrics {
+    gap: 1.5rem;
+    padding: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  
+  .property-metric {
+    gap: 0.5rem;
+  }
+
+  .property-metric-icon {
+    font-size: 1.1rem;
+  }
+
+  .property-metric-value {
+    font-size: 1rem;
+  }
+}
