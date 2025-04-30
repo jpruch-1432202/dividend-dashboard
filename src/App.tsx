@@ -30,6 +30,13 @@ type ValuationRecord = {
   valuation: number;
 };
 
+// Add new type for completed investments
+type CompletedInvestment = {
+  propertyName: string;
+  endingDate: Date;
+  finalPayout: number;
+};
+
 // Define the type for chart data points
 type ChartDataPoint = {
   date: string;
@@ -82,6 +89,7 @@ function App() {
   const [acquisitionDates, setAcquisitionDates] = useState<AcquisitionDate[]>([]);
   const [valuations, setValuations] = useState<ValuationRecord[]>([]);
   const [propertyData, setPropertyData] = useState<PropertyData[]>([]);
+  const [completedInvestments, setCompletedInvestments] = useState<CompletedInvestment[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAnnualizedYield, setShowAnnualizedYield] = useState(true);
@@ -201,6 +209,24 @@ function App() {
         );
       },
     });
+
+    // Load completed investments
+    Papa.parse("/completed investments.csv", {
+      download: true,
+      header: true,
+      complete: (results: any) => {
+        const data = results.data as any[];
+        setCompletedInvestments(
+          data
+            .filter((row) => row["Property Name"] && row["Ending Date"] && row["Final Payout"])
+            .map((row) => ({
+              propertyName: row["Property Name"],
+              endingDate: new Date(row["Ending Date"]),
+              finalPayout: parseFloat(row["Final Payout"])
+            }))
+        );
+      },
+    });
   }, []);
 
   const propertyNames = Array.from(new Set(dividends.map(d => d.propertyName))).sort();
@@ -249,6 +275,16 @@ function App() {
         return null;
       }
     }
+
+    // Check if the date is after the investment completion date
+    if (selectedProperty) {
+      const endDate = getPropertyEndDate(selectedProperty);
+      const cellDate = new Date(year, monthIdx, 1);
+      if (cellDate > endDate) {
+        return null; // blank cell for dates after completion
+      }
+    }
+
     // Blank out months before acquisition date for the selected property,
     // but if a dividend is paid in the same month as acquisition, show the checkmark
     if (selectedProperty) {
@@ -287,6 +323,27 @@ function App() {
     return dividend ? dividend.dividendPerShare : 0;
   }
 
+  // Helper function to get the end date for a property
+  const getPropertyEndDate = (propertyName: string): Date => {
+    const completedInvestment = completedInvestments.find(ci => ci.propertyName === propertyName);
+    return completedInvestment ? completedInvestment.endingDate : new Date(2025, 2, 31);
+  };
+
+  // Helper function to get the final value for a property
+  const getPropertyFinalValue = (propertyName: string): number => {
+    const completedInvestment = completedInvestments.find(ci => ci.propertyName === propertyName);
+    if (completedInvestment) {
+      return completedInvestment.finalPayout;
+    }
+    
+    // Get the most recent valuation for the property
+    const propertyValuations = valuations
+      .filter(v => v.propertyName === propertyName)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+    
+    return propertyValuations.length > 0 ? propertyValuations[0].valuation : 10;
+  };
+
   // Calculate all-time average yield for the selected property
   const calculateAverageYield = () => {
     if (!selectedProperty) return null;
@@ -296,11 +353,13 @@ function App() {
     
     if (!propertyDividends.length || !acquisitionDate) return null;
 
-    const endDate = new Date(2025, 2, 31); // March 31, 2025
+    const endDate = getPropertyEndDate(selectedProperty);
     const totalDays = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Sum up all dividends
-    const totalDividends = propertyDividends.reduce((sum, div) => sum + div.dividendPerShare, 0);
+    const totalDividends = propertyDividends
+      .filter(d => d.dividendDate <= endDate)
+      .reduce((sum, div) => sum + div.dividendPerShare, 0);
     
     // Calculate annualized yield
     const yieldValue = ((totalDividends / totalDays) * 365 / 10 * 100);
@@ -323,13 +382,14 @@ function App() {
         { date: 'Jan 2025', amount: null }
       ];
     }
-    
+
     const rawData = dividends
       .filter(d => d.propertyName === selectedProperty)
       .sort((a, b) => a.dividendDate.getTime() - b.dividendDate.getTime());
 
     const monthlyData: (ChartDataPoint & { averageYield?: number | null })[] = [];
     const averageYield = calculateAverageYield();
+    const averageDividend = averageYield ? (averageYield / 100 * 10) / 12 : null; // Convert annual yield to monthly dividend
     
     rawData.forEach(dividend => {
       const date = dividend.dividendDate;
@@ -358,7 +418,7 @@ function App() {
               month: 'short'
             }),
             amount: annualizedYield,
-            averageYield: showAnnualizedYield ? averageYield : null
+            averageYield: showAverageYield ? (showAnnualizedYield ? averageYield : averageDividend) : null
           });
         });
       } else {
@@ -374,7 +434,7 @@ function App() {
             month: 'short'
           }),
           amount: annualizedYield,
-          averageYield: showAnnualizedYield ? averageYield : null
+          averageYield: showAverageYield ? (showAnnualizedYield ? averageYield : averageDividend) : null
         });
       }
     });
@@ -403,14 +463,16 @@ function App() {
     let totalDividends = 0;
     let ttmYield = 0;
 
+    const endDate = getPropertyEndDate(selectedProperty);
+
     // Calculate TTM yield or annualized yield for newer properties
     if (selectedProperty) {
-      const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty);
+      const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty && d.dividendDate <= endDate);
       const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
       
       if (acquisitionDate) {
-        const endDate = new Date(2025, 2, 31); // March 31, 2025
-        const twelveMonthsAgo = new Date(2025, 2 - 11, 1); // 12 months before March 2025
+        const twelveMonthsAgo = new Date(endDate);
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
         const daysSinceAcquisition = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
 
         if (daysSinceAcquisition >= 365) {
@@ -423,7 +485,6 @@ function App() {
         } else {
           // Property is newer than 12 months - annualize the returns
           const totalDividendsSinceAcquisition = propertyDividends
-            .filter(d => d.dividendDate <= endDate)
             .reduce((sum, div) => sum + div.dividendPerShare, 0);
           const annualizedYieldValue = ((totalDividendsSinceAcquisition / daysSinceAcquisition) * 365 / 10 * 100);
           ttmYield = Number(annualizedYieldValue.toFixed(1));
@@ -431,22 +492,24 @@ function App() {
       }
     }
 
-    // Calculate success rate
+    // Calculate success rate up to the end date
     years.forEach(year => {
       months.forEach((_, monthIdx) => {
-        const paid = wasPaidOrBlank(year, monthIdx);
-        // Only count non-null values (actual payment opportunities)
-        if (paid !== null) {
-          totalCount++;
-          if (paid) paidCount++;
+        const monthDate = new Date(year, monthIdx, 1);
+        if (monthDate <= endDate) {
+          const paid = wasPaidOrBlank(year, monthIdx);
+          if (paid !== null) {
+            totalCount++;
+            if (paid) paidCount++;
+          }
         }
       });
     });
 
-    // Calculate total dividends paid
+    // Calculate total dividends up to the end date
     if (selectedProperty) {
       totalDividends = dividends
-        .filter(d => d.propertyName === selectedProperty)
+        .filter(d => d.propertyName === selectedProperty && d.dividendDate <= endDate)
         .reduce((sum, div) => sum + div.dividendPerShare, 0);
     }
 
@@ -549,24 +612,13 @@ function App() {
       totalGrossReturn: null
     };
 
-    const propertyValuations = valuations
-      .filter(v => v.propertyName === selectedProperty)
-      .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date descending
-
-    if (propertyValuations.length === 0) return {
-      currentValuation: 10, // If no valuations, return initial $10 value
-      appreciationPerShare: 0,
-      appreciationPercent: 0,
-      totalGrossReturn: (calculateDividendStats().totalDividends / 10 * 100)
-    };
-
-    const currentValuation = propertyValuations[0].valuation;
-    const appreciationPerShare = currentValuation - 10;
+    const finalValue = getPropertyFinalValue(selectedProperty);
+    const appreciationPerShare = finalValue - 10;
     const appreciationPercent = (appreciationPerShare / 10) * 100;
     const totalGrossReturn = ((appreciationPerShare + calculateDividendStats().totalDividends) / 10) * 100;
 
     return {
-      currentValuation,
+      currentValuation: finalValue,
       appreciationPerShare,
       appreciationPercent,
       totalGrossReturn
@@ -595,7 +647,7 @@ function App() {
     const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
     if (!acquisitionDate) return null;
 
-    const endDate = new Date(2025, 2, 31); // March 31, 2025
+    const endDate = getPropertyEndDate(selectedProperty);
     const totalDays = Math.floor((endDate.getTime() - acquisitionDate.getTime()) / (1000 * 60 * 60 * 24));
     const totalGrossReturn = calculateValuationMetrics().totalGrossReturn;
     
@@ -653,9 +705,10 @@ function App() {
 
     const propertyDividends = dividends.filter(d => d.propertyName === selectedProperty);
     const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
-    const currentValuation = calculateValuationMetrics().currentValuation;
+    const endDate = getPropertyEndDate(selectedProperty);
+    const finalValue = getPropertyFinalValue(selectedProperty);
     
-    if (!acquisitionDate || !currentValuation) return null;
+    if (!acquisitionDate) return null;
 
     // Create array of cash flows
     const cashFlows: { amount: number; date: Date }[] = [
@@ -663,9 +716,9 @@ function App() {
       { amount: -10, date: acquisitionDate }
     ];
 
-    // Add all dividends
+    // Add all dividends up to the end date
     propertyDividends.forEach(div => {
-      if (div.dividendDate <= new Date(2025, 2, 31)) { // Only include dividends up to March 31, 2025
+      if (div.dividendDate <= endDate) {
         cashFlows.push({
           amount: div.dividendPerShare,
           date: div.dividendDate
@@ -673,14 +726,14 @@ function App() {
       }
     });
 
-    // Add final valuation
+    // Add final value
     cashFlows.push({
-      amount: currentValuation,
-      date: new Date(2025, 2, 31) // March 31, 2025
+      amount: finalValue,
+      date: endDate
     });
 
     const irr = calculateIRR(cashFlows);
-    return irr ? (irr * 100) : null; // Convert to percentage
+    return irr ? (irr * 100) : null;
   };
 
   return (
@@ -714,6 +767,23 @@ function App() {
         </div>
       </div>
 
+      {/* Completed Investment Alert */}
+      {displayedProperty && completedInvestments.some(ci => ci.propertyName === displayedProperty) && (
+        <div className="completed-investment-alert">
+          <div className="alert-content">
+            <span className="alert-icon">ℹ️</span>
+            <span className="alert-text">
+              This is a completed investment that was fully realized as of{' '}
+              {completedInvestments.find(ci => ci.propertyName === displayedProperty)?.endingDate.toLocaleDateString('en-US', { 
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Always show the structure, even without a selected property */}
       <div className="property-summary-section">
         <h3>Property Summary</h3>
@@ -745,7 +815,7 @@ function App() {
                 {displayedProperty ? (() => {
                   const property = propertyData.find(p => p.propertyName === displayedProperty);
                   if (!property) return "—";
-                  const endDate = new Date(2025, 2, 31);
+                  const endDate = getPropertyEndDate(displayedProperty);
                   const days = Math.floor((endDate.getTime() - property.ipoDate.getTime()) / (1000 * 60 * 60 * 24));
                   return `${(days / 365).toFixed(1)} years`;
                 })() : "—"}
@@ -992,16 +1062,14 @@ function App() {
                 </div>
               </div>
             </div>
-            {showAnnualizedYield && (
-              <label className="average-yield-toggle">
-                <input
-                  type="checkbox"
-                  checked={showAverageYield}
-                  onChange={(e) => setShowAverageYield(e.target.checked)}
-                />
-                <span>Show All-Time Average</span>
-              </label>
-            )}
+            <label className="average-yield-toggle">
+              <input
+                type="checkbox"
+                checked={showAverageYield}
+                onChange={(e) => setShowAverageYield(e.target.checked)}
+              />
+              <span>Show All-Time Average {showAnnualizedYield ? 'Yield' : 'Dividend'}</span>
+            </label>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
@@ -1030,9 +1098,15 @@ function App() {
             <Tooltip 
               formatter={(value, name) => {
                 if (name === 'averageYield') {
-                  return value ? [`${value}%`, 'All-Time Average'] : ['-', 'All-Time Average'];
+                  return value ? [
+                    showAnnualizedYield ? `${value}%` : `$${Number(value).toFixed(3)}`,
+                    `All-Time Average ${showAnnualizedYield ? 'Yield' : 'Dividend'}`
+                  ] : ['-', `All-Time Average ${showAnnualizedYield ? 'Yield' : 'Dividend'}`];
                 }
-                return value ? [showAnnualizedYield ? `${value}%` : `$${value}`, showAnnualizedYield ? 'Annualized Yield' : 'Dividend'] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Dividend'];
+                return value ? [
+                  showAnnualizedYield ? `${value}%` : `$${value}`, 
+                  showAnnualizedYield ? 'Annualized Yield' : 'Dividend'
+                ] : ['-', showAnnualizedYield ? 'Annualized Yield' : 'Dividend'];
               }}
               labelStyle={{ color: 'var(--arrived-primary)' }}
               contentStyle={{ 
@@ -1049,7 +1123,7 @@ function App() {
               dot={{ fill: 'var(--arrived-accent)' }}
               activeDot={{ r: 6 }}
             />
-            {showAverageYield && showAnnualizedYield && (
+            {showAverageYield && (
               <Line 
                 type="monotone" 
                 dataKey="averageYield" 

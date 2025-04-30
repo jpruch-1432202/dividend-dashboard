@@ -39,6 +39,8 @@ h2 {
 .search-container {
   position: relative;
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 input {
@@ -48,9 +50,6 @@ input {
   border: 1px solid var(--arrived-border);
   border-radius: 8px;
   width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
-  display: block;
   transition: all 0.2s ease;
   background-color: var(--arrived-background);
 }
@@ -62,8 +61,7 @@ input:focus {
 }
 
 .property-selector {
-  margin: 2rem auto;
-  max-width: 400px;
+  margin-bottom: 1rem;
 }
 
 .property-dropdown {
@@ -79,6 +77,7 @@ input:focus {
   overflow-y: auto;
   box-shadow: 0 4px 12px var(--arrived-shadow);
   z-index: 10;
+  width: 100%;
 }
 
 .property-option {
@@ -214,25 +213,29 @@ td[title]:hover::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 20px;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 300px;
+  justify-content: flex-end;
 }
 
 .chart-toggle {
-  display: flex;
-  align-items: center;
+  flex: 0 0 80px; /* Fixed width, won't grow or shrink */
 }
 
 .toggle-switch {
-  position: relative;
-  display: inline-block;
   width: 80px;
   height: 30px;
-  background-color: white;
+  background: var(--arrived-background);
+  border: 1px solid var(--arrived-border);
   border-radius: 15px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
   overflow: hidden;
-  border: 1px solid var(--arrived-border);
 }
 
 .toggle-slider {
@@ -389,24 +392,19 @@ td[title]:hover::after {
   }
 }
 
-.chart-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
 .average-yield-toggle {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .average-yield-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
   cursor: pointer;
+  margin: 0;
 }
 
 .average-yield-toggle span {
@@ -418,7 +416,7 @@ td[title]:hover::after {
   .chart-controls {
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.5rem;
+    gap: 8px;
   }
 }
 
@@ -896,5 +894,40 @@ td[title]:hover::after {
     font-size: 0.85rem;
     padding: 10px 14px;
     max-width: 250px;
+  }
+}
+
+.completed-investment-alert {
+  background-color: #FFF8E1;
+  border: 1px solid #FFE082;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 0 auto 1.5rem;
+  max-width: 800px;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.alert-icon {
+  font-size: 1.2rem;
+}
+
+.alert-text {
+  color: #F57F17;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .completed-investment-alert {
+    margin: 0 1rem 1.5rem;
+  }
+  
+  .alert-text {
+    font-size: 0.9rem;
   }
 }
