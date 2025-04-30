@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import "./App.css";
 
-const { FaBed, FaBath, FaRulerCombined, FaCalendarAlt } = require('react-icons/fa');
+const { FaBed, FaBath, FaRulerCombined, FaCalendarAlt, FaHammer } = require('react-icons/fa');
 
 // Define the type for your dividend data
 type DividendRecord = {
@@ -556,65 +556,93 @@ function App() {
       ];
     }
 
-    const acquisitionDate = acquisitionDates.find(a => a.propertyName === selectedProperty)?.escrowClose;
-    if (!acquisitionDate) return [];
+    const property = propertyData.find(p => p.propertyName === selectedProperty);
+    if (!property) return [];
 
+    // Filter out any $10 valuations that occur before the first non-$10 valuation
     const propertyValuations = valuations
       .filter(v => v.propertyName === selectedProperty)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    const chartData: ValuationChartPoint[] = [];
-
-    // Add acquisition date point with $10 value
-    chartData.push({
-      date: acquisitionDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short'
-      }),
-      value: 10
-    });
-
-    // If there are no valuations, add one more point at the end with $10
-    if (propertyValuations.length === 0) {
-      const today = new Date();
-      chartData.push({
-        date: today.toLocaleDateString('en-US', {
+    // Find the first non-$10 valuation
+    const firstNonTenIndex = propertyValuations.findIndex(v => Math.abs(v.valuation - 10) > 0.001);
+    
+    // If we never find a non-$10 valuation, just show IPO point
+    if (firstNonTenIndex === -1) {
+      return [{
+        date: property.ipoDate.toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short'
         }),
         value: 10
-      });
-      return chartData;
+      }];
     }
 
-    // If the first valuation is after the acquisition date, add $10 points until first valuation
-    if (propertyValuations[0].date > acquisitionDate) {
-      const monthsBetween = (propertyValuations[0].date.getMonth() - acquisitionDate.getMonth()) +
-        12 * (propertyValuations[0].date.getFullYear() - acquisitionDate.getFullYear());
-      
-      for (let i = 1; i < monthsBetween; i++) {
-        const date = new Date(acquisitionDate);
-        date.setMonth(date.getMonth() + i);
-        chartData.push({
-          date: date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short'
-          }),
-          value: 10
-        });
-      }
-    }
+    // Keep only valuations from IPO to latest, but skip $10 valuations before the first non-$10 valuation
+    const filteredValuations = [
+      ...propertyValuations.slice(firstNonTenIndex)
+    ];
 
-    // Add all valuation points
-    propertyValuations.forEach(valuation => {
-      chartData.push({
-        date: valuation.date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short'
-        }),
-        value: valuation.valuation
-      });
+    const chartData: ValuationChartPoint[] = [];
+
+    // Generate all dates from IPO to latest valuation at 3-month intervals
+    const startDate = new Date(property.ipoDate);
+    const endDate = filteredValuations.length > 0 
+      ? new Date(filteredValuations[filteredValuations.length - 1].date)
+      : new Date();
+
+    // Function to format date consistently
+    const formatDate = (date: Date) => date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short'
     });
+
+    // Add IPO point
+    chartData.push({
+      date: formatDate(startDate),
+      value: 10
+    });
+
+    // Generate quarterly points
+    let currentDate = new Date(startDate);
+    currentDate.setMonth(currentDate.getMonth() + 3);
+
+    while (currentDate <= endDate) {
+      // Find if there's a valuation for this date
+      const valuation = filteredValuations.find(v => {
+        const vDate = new Date(v.date);
+        // Check if this valuation is within this quarter
+        return Math.abs(vDate.getTime() - currentDate.getTime()) < 45 * 24 * 60 * 60 * 1000; // 45 days threshold
+      });
+
+      // If there's a valuation for this quarter, add it
+      if (valuation) {
+        chartData.push({
+          date: formatDate(valuation.date),
+          value: valuation.valuation
+        });
+      } else {
+        // For dates between IPO and first valuation, add null
+        const firstValuation = filteredValuations[0];
+        if (currentDate < firstValuation.date) {
+          chartData.push({
+            date: formatDate(currentDate),
+            value: null
+          });
+        } else {
+          // Find the surrounding valuations
+          const prevValuation = [...filteredValuations].reverse().find(v => v.date <= currentDate);
+          if (prevValuation) {
+            chartData.push({
+              date: formatDate(currentDate),
+              value: prevValuation.valuation
+            });
+          }
+        }
+      }
+
+      currentDate.setMonth(currentDate.getMonth() + 3);
+    }
 
     return chartData;
   };
@@ -803,41 +831,38 @@ function App() {
       {/* Property Summary Section */}
       <div className="property-summary-section">
         <h3>Property Summary</h3>
+        <div className="property-metrics">
+          <div className="property-metric">
+            <FaBed className="property-metric-icon" />
+            <div className="property-metric-value">
+              {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.bedrooms : "—"}
+            </div>
+          </div>
+          <div className="property-metric">
+            <FaBath className="property-metric-icon" />
+            <div className="property-metric-value">
+              {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.totalBathrooms : "—"}
+            </div>
+          </div>
+          <div className="property-metric">
+            <FaRulerCombined className="property-metric-icon" />
+            <div className="property-metric-value">
+              {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.squareFootage.toLocaleString() : "—"}
+              <span className="property-metric-unit">sqft</span>
+            </div>
+          </div>
+          <div className="property-metric">
+            <FaHammer className="property-metric-icon" />
+            <div className="property-metric-value">
+              {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.yearBuilt : "—"}
+            </div>
+          </div>
+        </div>
         <div className="property-summary-grid">
           <div className="property-summary-left">
             <div className="property-detail">
               <span className="property-label">Full Address:</span>
               <span className="property-value">{displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.fullAddress : "—"}</span>
-            </div>
-            <div className="property-detail">
-              <span className="property-label">Property Information:</span>
-              <div className="property-metrics">
-                <div className="property-metric">
-                  <FaBed className="property-metric-icon" />
-                  <div className="property-metric-value">
-                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.bedrooms : "—"}
-                  </div>
-                </div>
-                <div className="property-metric">
-                  <FaBath className="property-metric-icon" />
-                  <div className="property-metric-value">
-                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.totalBathrooms : "—"}
-                  </div>
-                </div>
-                <div className="property-metric">
-                  <FaRulerCombined className="property-metric-icon" />
-                  <div className="property-metric-value">
-                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.squareFootage.toLocaleString() : "—"}
-                    <span className="property-metric-unit">sqft</span>
-                  </div>
-                </div>
-                <div className="property-metric">
-                  <FaCalendarAlt className="property-metric-icon" />
-                  <div className="property-metric-value">
-                    {displayedProperty ? propertyData.find(p => p.propertyName === displayedProperty)?.yearBuilt : "—"}
-                  </div>
-                </div>
-              </div>
             </div>
             <div className="property-detail">
               <span className="property-label">Market:</span>
@@ -1248,12 +1273,13 @@ function App() {
               }}
             />
             <Line 
-              type="monotone" 
+              type="linear" 
               dataKey="value" 
               stroke="var(--arrived-accent)" 
               strokeWidth={2}
               dot={{ fill: 'var(--arrived-accent)' }}
               activeDot={{ r: 6 }}
+              connectNulls={true}
             />
           </LineChart>
         </ResponsiveContainer>
